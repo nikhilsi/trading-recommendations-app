@@ -1,0 +1,50 @@
+# Create the .gitignore file
+cat > .gitignore << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment variables (IMPORTANT - keeps your API key private!)
+.env
+.env.local
+.env.production
+
+# Docker
+.dockerignore
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Temporary files
+*_backup*
+*_temp*
+*_old*
+test_*.py
+
+# Database files
+*.db
+*.sqlite
+
+# Build outputs
+dist/
+build/
+EOF
