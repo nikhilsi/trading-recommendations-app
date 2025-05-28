@@ -37,3 +37,7 @@ python-multipart==0.0.6
 # API Documentation
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# Market Data Providers
+yfinance==0.2.61
+pandas-ta==0.3.14b0  # Technical analysis for pandas
