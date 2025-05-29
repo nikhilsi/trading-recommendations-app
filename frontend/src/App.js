@@ -60,7 +60,8 @@ function App() {
       setScanLoading(true);
       setError(null);
       
-      const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=10`);
+      // Use Polygon as primary source
+      const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=15&source=polygon`);
       
       console.log('Scanner response:', response.data);
       

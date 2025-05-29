@@ -362,28 +362,79 @@ async def health_check():
         )
 
 # Market scanner endpoint
+# Market scanner endpoint - UPDATE this existing endpoint
 @app.get("/api/market/scan", tags=["market"])
 async def scan_market(
     scan_type: str = "momentum",
-    limit: int = 10
+    limit: int = 10,
+    source: str = "polygon"  # Add source parameter
 ):
-    """Scan market for opportunities using Yahoo Finance"""
+    """Scan market for opportunities using multiple sources"""
     try:
-        from services.yahoo_data_service import YahooDataService
-        yahoo = YahooDataService()
-        
-        opportunities = yahoo.scan_for_opportunities(scan_type)
+        if source == "polygon":
+            from services.polygon_service import PolygonService
+            polygon = PolygonService()
+            
+            # Get market snapshot
+            snapshot = polygon.get_market_snapshot()
+            
+            # Convert to opportunities format
+            opportunities = []
+            
+            if scan_type == "momentum":
+                # Use gainers for momentum
+                for stock in snapshot['gainers'][:limit]:
+                    opportunities.append({
+                        'symbol': stock['symbol'],
+                        'price': round(stock['price'], 2),
+                        'change_percent': round(stock['change_percent'], 2),
+                        'volume_ratio': 0,  # Polygon doesn't provide avg volume
+                        'score': int(50 + stock['change_percent'] * 5),  # Dynamic score
+                        'signals': [
+                            f"Top gainer: +{stock['change_percent']:.1f}%",
+                            f"Volume: {stock['volume']:,}"
+                        ],
+                        'scan_type': scan_type,
+                        'data_source': 'polygon'
+                    })
+            elif scan_type == "oversold":
+                # Use losers for oversold
+                for stock in snapshot['losers'][:limit]:
+                    opportunities.append({
+                        'symbol': stock['symbol'],
+                        'price': round(stock['price'], 2),
+                        'change_percent': round(stock['change_percent'], 2),
+                        'volume_ratio': 0,
+                        'score': int(50 + abs(stock['change_percent']) * 3),
+                        'signals': [
+                            f"Oversold: {stock['change_percent']:.1f}%",
+                            "Potential bounce candidate"
+                        ],
+                        'scan_type': scan_type,
+                        'data_source': 'polygon'
+                    })
+        else:
+            # Fallback to Yahoo
+            from services.yahoo_data_service import YahooDataService
+            yahoo = YahooDataService()
+            opportunities = yahoo.scan_for_opportunities(scan_type)
         
         return {
             "opportunities": opportunities[:limit],
             "scan_type": scan_type,
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "yahoo"
+            "source": source,
+            "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
         logger.error(f"Market scan error: {e}")
+        # Fallback to Yahoo on error
+        from services.yahoo_data_service import YahooDataService
+        yahoo = YahooDataService()
+        opportunities = yahoo.scan_for_opportunities(scan_type)
         return {
-            "opportunities": [],
+            "opportunities": opportunities[:limit],
+            "scan_type": scan_type,
+            "source": "yahoo_fallback",
             "error": str(e)
         }
 

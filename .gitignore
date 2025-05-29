@@ -38,7 +38,7 @@ npm-debug.log*
 *_backup*
 *_temp*
 *_old*
-test_*.py
+# test_*.py
 
 # Database files
 *.db
