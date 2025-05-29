@@ -163,6 +163,7 @@ class YahooDataService:
             
             universe = list(set(universe))[:30]  # Limit to 30 stocks
             
+            print(f"Running {scan_type} scan on {len(universe)} stocks")
             logger.info(f"Running {scan_type} scan on {len(universe)} stocks")
             
             # Download data for analysis (5 days)
@@ -171,9 +172,11 @@ class YahooDataService:
                 period='5d',
                 interval='1d',
                 auto_adjust=True,
-                threads=True
+                group_by='ticker',  # Add this line
+                threads=True,
+                progress=False  # Add this for cleaner output
             )
-            
+            print(data)
             opportunities = []
             
             for symbol in universe:
@@ -194,13 +197,15 @@ class YahooDataService:
             logger.error(f"Error in opportunity scan: {e}")
             return []
     
-    def _analyze_opportunity(self, symbol: str, data: pd.DataFrame, scan_type: str) -> Optional[Dict[str, Any]]:
         """Analyze a single stock for opportunity"""
         try:
-            # Extract symbol data
-            if symbol in data.columns.levels[0]:
-                symbol_data = data[symbol].dropna()
-            else:
+            # Extract symbol data from MultiIndex DataFrame
+            if hasattr(data.columns, 'levels'):  # MultiIndex columns
+                if symbol in data.columns.levels[0]:
+                    symbol_data = data[symbol].dropna()
+                else:
+                    return None
+            else:  # Single symbol data
                 symbol_data = data.dropna()
                 
             if len(symbol_data) < 2:
@@ -269,12 +274,104 @@ class YahooDataService:
             logger.error(f"Error analyzing {symbol}: {e}")
             return None
     
-    def get_historical_data(self, symbol: str, period: str = '1mo') -> Optional[pd.DataFrame]:
-        """Get historical price data"""
+    def _analyze_opportunity(self, symbol: str, data: pd.DataFrame, scan_type: str) -> Optional[Dict[str, Any]]:
+        """Analyze a single stock for opportunity"""
         try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period=period)
-            return hist
-        except Exception as e:
-            logger.error(f"Error getting historical data for {symbol}: {e}")
+            # Handle MultiIndex columns (Symbol, Price Type)
+            if hasattr(data.columns, 'levels') and len(data.columns.levels) == 2:  # MultiIndex
+                # Check if symbol exists in the data
+                if symbol not in data.columns.levels[0]:
+                    return None
+                
+                # Extract Close prices for the symbol
+                close_prices = data[(symbol, 'Close')].dropna()
+                volume_data = data[(symbol, 'Volume')].dropna()
+                
+                if len(close_prices) < 2:
+                    return None
+                    
+                current_price = close_prices.iloc[-1]
+                prev_price = close_prices.iloc[-2]
+                current_volume = volume_data.iloc[-1]
+                avg_volume = volume_data.mean()
+                
+                # Use close prices for calculations
+                prices = close_prices.values
+            else:
+                # Single symbol data
+                symbol_data = data.dropna()
+                if len(symbol_data) < 2:
+                    return None
+                    
+                current_price = symbol_data['Close'].iloc[-1]
+                prev_price = symbol_data['Close'].iloc[-2]
+                current_volume = symbol_data['Volume'].iloc[-1]
+                avg_volume = symbol_data['Volume'].mean()
+                prices = symbol_data['Close'].values
+            
+            # Calculate metrics
+            change_pct = ((current_price - prev_price) / prev_price) * 100
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
+            
+            # Calculate simple technical indicators
+            sma_5 = prices[-5:].mean() if len(prices) >= 5 else current_price
+            
+            # Scoring based on scan type
+            score = 0
+            signals = []
+            
+            if scan_type == 'momentum':
+                if change_pct > 2:
+                    score += 40
+                    signals.append(f"Strong momentum: +{change_pct:.1f}%")
+                if current_price > sma_5:
+                    score += 20
+                    signals.append("Price above 5-day average")
+                if volume_ratio > 1.5:
+                    score += 20
+                    signals.append(f"High volume: {volume_ratio:.1f}x average")
+                    
+            elif scan_type == 'volume':
+                if volume_ratio > 2:
+                    score += 50
+                    signals.append(f"Volume spike: {volume_ratio:.1f}x average")
+                if change_pct > 0:
+                    score += 30
+                    signals.append("Positive price action")
+                    
+            elif scan_type == 'oversold':
+                # Simple oversold check
+                if change_pct < -3:
+                    score += 30
+                    signals.append("Potential oversold")
+                if current_price < sma_5 * 0.95:
+                    score += 30
+                    signals.append("Price below 5-day average")
+                    
+            if score > 0:
+                return {
+                    'symbol': symbol,
+                    'price': round(current_price, 2),
+                    'change_percent': round(change_pct, 2),
+                    'volume_ratio': round(volume_ratio, 2),
+                    'score': score,
+                    'signals': signals,
+                    'scan_type': scan_type,
+                    'data_source': 'yahoo'
+                }
+            
             return None
+            
+        except Exception as e:
+            logger.error(f"Error analyzing {symbol}: {e}")
+            return None
+            
+        def get_historical_data(self, symbol: str, period: str = '1mo') -> Optional[pd.DataFrame]:
+            """Get historical price data"""
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period=period)
+                return hist
+            except Exception as e:
+                logger.error(f"Error getting historical data for {symbol}: {e}")
+                return None
