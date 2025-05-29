@@ -163,7 +163,6 @@ class YahooDataService:
             
             universe = list(set(universe))[:30]  # Limit to 30 stocks
             
-            print(f"Running {scan_type} scan on {len(universe)} stocks")
             logger.info(f"Running {scan_type} scan on {len(universe)} stocks")
             
             # Download data for analysis (5 days)
@@ -176,13 +175,12 @@ class YahooDataService:
                 threads=True,
                 progress=False  # Add this for cleaner output
             )
-            print(data)
             opportunities = []
             
             for symbol in universe:
                 try:
                     opportunity = self._analyze_opportunity(symbol, data, scan_type)
-                    if opportunity and opportunity['score'] > 60:
+                    if opportunity and opportunity['score'] >= 15:
                         opportunities.append(opportunity)
                 except Exception as e:
                     logger.warning(f"Error analyzing {symbol}: {e}")
@@ -190,7 +188,7 @@ class YahooDataService:
             
             # Sort by score
             opportunities.sort(key=lambda x: x['score'], reverse=True)
-            
+            print(opportunities)
             return opportunities[:10]  # Return top 10
             
         except Exception as e:
@@ -276,6 +274,7 @@ class YahooDataService:
     
     def _analyze_opportunity(self, symbol: str, data: pd.DataFrame, scan_type: str) -> Optional[Dict[str, Any]]:
         """Analyze a single stock for opportunity"""
+        logger.info(f"Analyzing {symbol} for {scan_type} scan")
         try:
             # Handle MultiIndex columns (Symbol, Price Type)
             if hasattr(data.columns, 'levels') and len(data.columns.levels) == 2:  # MultiIndex
@@ -308,7 +307,7 @@ class YahooDataService:
                 current_volume = symbol_data['Volume'].iloc[-1]
                 avg_volume = symbol_data['Volume'].mean()
                 prices = symbol_data['Close'].values
-            
+
             # Calculate metrics
             change_pct = ((current_price - prev_price) / prev_price) * 100
             volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
@@ -319,36 +318,69 @@ class YahooDataService:
             # Scoring based on scan type
             score = 0
             signals = []
-            
+
             if scan_type == 'momentum':
-                if change_pct > 2:
+                # More nuanced momentum scoring
+                if change_pct > 5:
                     score += 40
+                    signals.append(f"Very strong momentum: +{change_pct:.1f}%")
+                elif change_pct > 3:
+                    score += 30
                     signals.append(f"Strong momentum: +{change_pct:.1f}%")
+                elif change_pct > 1:
+                    score += 20
+                    signals.append(f"Positive momentum: +{change_pct:.1f}%")
+                
                 if current_price > sma_5:
-                    score += 20
+                    score += 15
                     signals.append("Price above 5-day average")
-                if volume_ratio > 1.5:
-                    score += 20
-                    signals.append(f"High volume: {volume_ratio:.1f}x average")
-                    
-            elif scan_type == 'volume':
+                
                 if volume_ratio > 2:
+                    score += 20
+                    signals.append(f"Very high volume: {volume_ratio:.1f}x average")
+                elif volume_ratio > 1.2:
+                    score += 10
+                    signals.append(f"Above average volume: {volume_ratio:.1f}x")
+
+            elif scan_type == 'volume':
+                # Volume-focused scoring
+                if volume_ratio > 3:
                     score += 50
-                    signals.append(f"Volume spike: {volume_ratio:.1f}x average")
-                if change_pct > 0:
-                    score += 30
-                    signals.append("Positive price action")
-                    
+                    signals.append(f"Massive volume spike: {volume_ratio:.1f}x average")
+                elif volume_ratio > 2:
+                    score += 35
+                    signals.append(f"High volume spike: {volume_ratio:.1f}x average")
+                elif volume_ratio > 1.5:
+                    score += 20
+                    signals.append(f"Elevated volume: {volume_ratio:.1f}x average")
+                
+                if change_pct > 1:
+                    score += 15
+                    signals.append(f"Positive price action: +{change_pct:.1f}%")
+
             elif scan_type == 'oversold':
-                # Simple oversold check
-                if change_pct < -3:
-                    score += 30
-                    signals.append("Potential oversold")
+                # Oversold scoring (looking for bounce candidates)
+                if change_pct < -5:
+                    score += 25
+                    signals.append(f"Heavily oversold: {change_pct:.1f}%")
+                elif change_pct < -3:
+                    score += 20
+                    signals.append(f"Oversold: {change_pct:.1f}%")
+                
                 if current_price < sma_5 * 0.95:
-                    score += 30
-                    signals.append("Price below 5-day average")
+                    score += 20
+                    signals.append("Trading below 5-day average")
+                
+                # Bonus if starting to recover
+                if change_pct < 0 and change_pct > -2:
+                    score += 15
+                    signals.append("Potential bounce setup")
+        
+            logger.info(f"Score: {score}, Signals: {signals}")
                     
             if score > 0:
+                logger.info(f"Opportunity found for {symbol}: Score {score}")
+                logger.info(f"Signals: {signals}")
                 return {
                     'symbol': symbol,
                     'price': round(current_price, 2),

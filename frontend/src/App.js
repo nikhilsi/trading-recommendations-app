@@ -11,6 +11,10 @@ function App() {
   const [loading, setLoading] = useState(false); // Change from true to false
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [marketOpportunities, setMarketOpportunities] = useState([]);
+  const [scanType, setScanType] = useState('momentum');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [lastScanTime, setLastScanTime] = useState(null);
   
   // Dynamic controls
   const [confidenceThreshold, setConfidenceThreshold] = useState(50);
@@ -88,6 +92,28 @@ function App() {
       fetchWatchlist();
     } catch (err) {
       console.error('Error removing symbol:', err);
+    }
+  };
+
+  const scanMarket = async () => {
+    try {
+      setScanLoading(true);
+      setError(null);
+      
+      const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=10`);
+      
+      console.log('Scanner response:', response.data); // Add this debug line
+      
+      if (response.data && response.data.opportunities) {
+        console.log('Setting opportunities:', response.data.opportunities); // Add this too
+        setMarketOpportunities(response.data.opportunities);
+        setLastScanTime(new Date());
+      }
+    } catch (err) {
+      console.error('Market scan error:', err);
+      setError(`Failed to scan market: ${err.message}`);
+    } finally {
+      setScanLoading(false);
     }
   };
 
@@ -292,6 +318,90 @@ function App() {
               <Database className="w-6 h-6 text-purple-600" />
             </div>
           </div>
+        </div>
+
+        {/* Market Scanner Section - Add this before Watchlist Management */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">Market Scanner</h3>
+          
+          <div className="flex items-center space-x-4 mb-4">
+            <select
+              value={scanType}
+              onChange={(e) => setScanType(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="momentum">Momentum Stocks</option>
+              <option value="volume">Volume Spikes</option>
+              <option value="oversold">Oversold Opportunities</option>
+            </select>
+            
+            <button
+              onClick={scanMarket}
+              disabled={scanLoading}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {scanLoading ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Activity className="w-4 h-4" />
+              )}
+              <span>{scanLoading ? 'Scanning...' : 'Scan Market'}</span>
+            </button>
+            
+            {lastScanTime && (
+              <span className="text-sm text-gray-500">
+                Last scan: {lastScanTime.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+          
+          {/* Display scan results */}
+          {marketOpportunities.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {marketOpportunities.slice(0, 6).map((opp, index) => (
+                <div key={`${opp.symbol}-${index}`} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-bold text-lg">{opp.symbol}</span>
+                      <p className="text-sm text-gray-600">Score: {opp.score}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">${opp.price}</p>
+                      <p className={`text-sm ${opp.change_percent > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {opp.change_percent > 0 ? '+' : ''}{opp.change_percent}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    {opp.signals && opp.signals.map((signal, i) => (
+                      <p key={i} className="text-xs text-gray-700">• {signal}</p>
+                    ))}
+                  </div>
+                  {/* Add this button */}
+                  <div className="mt-2 flex justify-between">
+                    <button
+                      onClick={() => {
+                        if (!watchlist.includes(opp.symbol)) {
+                          setNewSymbol(opp.symbol);
+                          addToWatchlist();
+                        }
+                      }}
+                      className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                      disabled={watchlist.includes(opp.symbol)}
+                    >
+                      {watchlist.includes(opp.symbol) ? 'In Watchlist' : 'Add to Watchlist'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {marketOpportunities.length === 0 && !scanLoading && (
+            <p className="text-gray-500 text-center py-4">
+              Click "Scan Market" to find opportunities
+            </p>
+          )}
         </div>
 
         {/* Watchlist Management */}

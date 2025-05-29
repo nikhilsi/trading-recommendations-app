@@ -35,9 +35,13 @@ except ImportError as e:
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO,  # Changed from INFO to DEBUG
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+# Also set specific loggers to DEBUG
+logging.getLogger("app").setLevel(logging.INFO)
+logging.getLogger("services").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -356,6 +360,32 @@ async def health_check():
                 "error": str(e)
             }
         )
+
+# Market scanner endpoint
+@app.get("/api/market/scan", tags=["market"])
+async def scan_market(
+    scan_type: str = "momentum",
+    limit: int = 10
+):
+    """Scan market for opportunities using Yahoo Finance"""
+    try:
+        from services.yahoo_data_service import YahooDataService
+        yahoo = YahooDataService()
+        
+        opportunities = yahoo.scan_for_opportunities(scan_type)
+        
+        return {
+            "opportunities": opportunities[:limit],
+            "scan_type": scan_type,
+            "timestamp": datetime.utcnow().isoformat(),
+            "source": "yahoo"
+        }
+    except Exception as e:
+        logger.error(f"Market scan error: {e}")
+        return {
+            "opportunities": [],
+            "error": str(e)
+        }
 
 # Global exception handler
 @app.exception_handler(Exception)
