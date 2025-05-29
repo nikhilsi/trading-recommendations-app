@@ -8,13 +8,9 @@ const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 function App() {
   const [recommendations, setRecommendations] = useState([]);
   const [watchlist, setWatchlist] = useState([]);
-  const [loading, setLoading] = useState(false); // Change from true to false
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [marketOpportunities, setMarketOpportunities] = useState([]);
-  const [scanType, setScanType] = useState('momentum');
-  const [scanLoading, setScanLoading] = useState(false);
-  const [lastScanTime, setLastScanTime] = useState(null);
   
   // Dynamic controls
   const [confidenceThreshold, setConfidenceThreshold] = useState(50);
@@ -24,6 +20,12 @@ function App() {
   
   // Persistence stats
   const [dbStats, setDbStats] = useState(null);
+
+  // Market scanner state
+  const [marketOpportunities, setMarketOpportunities] = useState([]);
+  const [scanType, setScanType] = useState('momentum');
+  const [scanLoading, setScanLoading] = useState(false);
+  const [lastScanTime, setLastScanTime] = useState(null);
 
   const fetchRecommendations = async () => {
     try {
@@ -53,6 +55,28 @@ function App() {
     }
   };
 
+  const scanMarket = async () => {
+    try {
+      setScanLoading(true);
+      setError(null);
+      
+      const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=10`);
+      
+      console.log('Scanner response:', response.data);
+      
+      if (response.data && response.data.opportunities) {
+        console.log('Setting opportunities:', response.data.opportunities);
+        setMarketOpportunities(response.data.opportunities);
+        setLastScanTime(new Date());
+      }
+    } catch (err) {
+      console.error('Market scan error:', err);
+      setError(`Failed to scan market: ${err.message}`);
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
   const fetchWatchlist = async () => {
     try {
       const response = await axios.get(`${API_BASE}/api/watchlist`);
@@ -71,18 +95,19 @@ function App() {
     }
   };
 
-  const addToWatchlist = async () => {
-    if (!newSymbol.trim()) return;
+  const addToWatchlist = async (symbolToAdd = null) => {
+    const symbol = symbolToAdd || newSymbol.trim();
+    if (!symbol) return;
     
     try {
       await axios.post(`${API_BASE}/api/watchlist`, {
-        symbol: newSymbol.toUpperCase().trim()
+        symbol: symbol.toUpperCase()
       });
       setNewSymbol('');
       fetchWatchlist();
     } catch (err) {
       console.error('Error adding symbol:', err);
-      setError(`Failed to add ${newSymbol}: ${err.response?.data?.detail || err.message}`);
+      setError(`Failed to add ${symbol}: ${err.response?.data?.detail || err.message}`);
     }
   };
 
@@ -95,34 +120,9 @@ function App() {
     }
   };
 
-  const scanMarket = async () => {
-    try {
-      setScanLoading(true);
-      setError(null);
-      
-      const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=10`);
-      
-      console.log('Scanner response:', response.data); // Add this debug line
-      
-      if (response.data && response.data.opportunities) {
-        console.log('Setting opportunities:', response.data.opportunities); // Add this too
-        setMarketOpportunities(response.data.opportunities);
-        setLastScanTime(new Date());
-      }
-    } catch (err) {
-      console.error('Market scan error:', err);
-      setError(`Failed to scan market: ${err.message}`);
-    } finally {
-      setScanLoading(false);
-    }
-  };
-
   useEffect(() => {
-    // Only fetch initial data, no auto-refresh
     fetchWatchlist();
     fetchDbStats();
-    
-    // Remove auto-refresh interval - user must click refresh
   }, []);
 
   const getActionColor = (action) => {
@@ -148,9 +148,7 @@ function App() {
     }
   };
 
-  // Trigger recommendations fetch when settings change (but not automatically)
   useEffect(() => {
-    // Only update stats when settings change, don't auto-fetch recommendations
     fetchDbStats();
   }, [confidenceThreshold, maxRecommendations]);
 
@@ -175,9 +173,9 @@ function App() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Stock Trading Recommendations</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Stock Trading Intelligence</h1>
               <p className="text-gray-600 mt-1">
-                AI-powered analysis • Confidence ≥{confidenceThreshold}% • Max {maxRecommendations} stocks
+                Market Scanner & AI-Powered Recommendations
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -187,14 +185,6 @@ function App() {
               >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
-              </button>
-              <button 
-                onClick={fetchRecommendations}
-                disabled={loading}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
               </button>
             </div>
           </div>
@@ -241,12 +231,6 @@ function App() {
               </div>
             </div>
           )}
-
-          {lastUpdated && (
-            <p className="text-sm text-gray-500 mt-2">
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </p>
-          )}
         </div>
 
         {/* Error Message */}
@@ -259,70 +243,9 @@ function App() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Recommendations</p>
-                <p className="text-2xl font-bold">{recommendations.length}</p>
-              </div>
-              <Activity className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Buy Signals</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {recommendations.filter(r => r.action === 'BUY').length}
-                </p>
-              </div>
-              <TrendingUp className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Sell Signals</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {recommendations.filter(r => r.action === 'SELL').length}
-                </p>
-              </div>
-              <TrendingDown className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Avg Confidence</p>
-                <p className="text-2xl font-bold">
-                  {recommendations.length > 0 
-                    ? Math.round(recommendations.reduce((sum, r) => sum + (r.confidence || 0), 0) / recommendations.length)
-                    : 0}%
-                </p>
-              </div>
-              <Activity className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Watchlist Size</p>
-                <p className="text-2xl font-bold">{watchlist.length}</p>
-              </div>
-              <Database className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Market Scanner Section - Add this before Watchlist Management */}
+        {/* Market Scanner Section - PRIMARY FEATURE */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Market Scanner</h3>
+          <h3 className="text-lg font-semibold mb-4">🔍 Market Scanner</h3>
           
           <div className="flex items-center space-x-4 mb-4">
             <select
@@ -357,8 +280,8 @@ function App() {
           
           {/* Display scan results */}
           {marketOpportunities.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {marketOpportunities.slice(0, 6).map((opp, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {marketOpportunities.slice(0, 9).map((opp, index) => (
                 <div key={`${opp.symbol}-${index}`} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <div>
@@ -377,15 +300,9 @@ function App() {
                       <p key={i} className="text-xs text-gray-700">• {signal}</p>
                     ))}
                   </div>
-                  {/* Add this button */}
                   <div className="mt-2 flex justify-between">
                     <button
-                      onClick={() => {
-                        if (!watchlist.includes(opp.symbol)) {
-                          setNewSymbol(opp.symbol);
-                          addToWatchlist();
-                        }
-                      }}
+                      onClick={() => addToWatchlist(opp.symbol)}
                       className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
                       disabled={watchlist.includes(opp.symbol)}
                     >
@@ -398,92 +315,118 @@ function App() {
           )}
           
           {marketOpportunities.length === 0 && !scanLoading && (
-            <p className="text-gray-500 text-center py-4">
-              Click "Scan Market" to find opportunities
-            </p>
-          )}
-        </div>
-
-        {/* Watchlist Management */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Watchlist Management</h3>
-          
-          {/* Add Symbol */}
-          <div className="flex items-center space-x-2 mb-4">
-            <input
-              type="text"
-              placeholder="Enter symbol (e.g., AAPL)"
-              value={newSymbol}
-              onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-              onKeyPress={(e) => e.key === 'Enter' && addToWatchlist()}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              onClick={addToWatchlist}
-              className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add</span>
-            </button>
-          </div>
-
-          {/* Current Watchlist */}
-          <div className="flex flex-wrap gap-2">
-            {watchlist.map((symbol) => (
-              <div key={symbol} className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                <span className="font-medium">{symbol}</span>
-                <button
-                  onClick={() => removeFromWatchlist(symbol)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {dbStats && (
-            <div className="mt-4 text-sm text-gray-600">
-              Database: {dbStats.total_stocks} stocks • {dbStats.total_recommendations} historical recommendations • {dbStats.total_prices} price records
+            <div className="text-center py-8">
+              <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">Click "Scan Market" to find opportunities</p>
+              <p className="text-sm text-gray-400 mt-1">Yahoo Finance powered scanner</p>
             </div>
           )}
         </div>
 
-        {/* Recommendations Grid */}
-        {showInitialState ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Analyze</h3>
-            <p className="text-gray-600">
-              Click "Refresh" to analyze your watchlist and generate recommendations.
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Current settings: {confidenceThreshold}% confidence • {watchlist.length} stocks in watchlist
-            </p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Market Opportunities</p>
+                <p className="text-2xl font-bold">{marketOpportunities.length}</p>
+              </div>
+              <Activity className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">AI Recommendations</p>
+                <p className="text-2xl font-bold">{recommendations.length}</p>
+              </div>
+              <TrendingUp className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Buy Signals</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {recommendations.filter(r => r.action === 'BUY').length}
+                </p>
+              </div>
+              <TrendingUp className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Sell Signals</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {recommendations.filter(r => r.action === 'SELL').length}
+                </p>
+              </div>
+              <TrendingDown className="w-6 h-6 text-red-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Watchlist Size</p>
+                <p className="text-2xl font-bold">{watchlist.length}</p>
+              </div>
+              <Database className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* AI Recommendations Section */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">🤖 AI Recommendations</h3>
             <button 
               onClick={fetchRecommendations}
-              className="mt-4 flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors mx-auto"
+              disabled={loading}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition-colors"
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Start Analysis</span>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Analyze Watchlist</span>
             </button>
           </div>
-        ) : recommendations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Strong Signals Found</h3>
-            <p className="text-gray-600">
-              Try lowering the confidence threshold or check back later for new opportunities.
+
+          {lastUpdated && (
+            <p className="text-sm text-gray-500 mb-4">
+              Last analysis: {lastUpdated.toLocaleTimeString()} • Confidence ≥{confidenceThreshold}% • Max {maxRecommendations} stocks
             </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Current threshold: {confidenceThreshold}% • Analyzed {watchlist.length} stocks
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {recommendations.map((stock, index) => (
-              <div key={`${stock.symbol}-${index}`} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                <div className="p-6">
+          )}
+
+          {/* Recommendations Grid */}
+          {showInitialState ? (
+            <div className="text-center py-8">
+              <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ready to Analyze</h3>
+              <p className="text-gray-600">
+                Click "Analyze Watchlist" to generate AI-powered recommendations.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Current settings: {confidenceThreshold}% confidence • {watchlist.length} stocks in watchlist
+              </p>
+            </div>
+          ) : recommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Strong Signals Found</h3>
+              <p className="text-gray-600">
+                Try lowering the confidence threshold or check back later for new opportunities.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                Current threshold: {confidenceThreshold}% • Analyzed {watchlist.length} stocks
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {recommendations.map((stock, index) => (
+                <div key={`${stock.symbol}-${index}`} className="bg-gray-50 rounded-lg p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="flex items-center space-x-2">
@@ -535,7 +478,7 @@ function App() {
                   </div>
 
                   {stock.reasoning && stock.reasoning.length > 0 && (
-                    <div className="border-t border-gray-100 pt-4">
+                    <div className="border-t border-gray-200 pt-4">
                       <h4 className="font-semibold mb-2 text-sm text-gray-700">Key Reasons:</h4>
                       <ul className="space-y-1">
                         {(Array.isArray(stock.reasoning) ? stock.reasoning.slice(0, 2) : [stock.reasoning]).map((reason, i) => (
@@ -548,10 +491,53 @@ function App() {
                     </div>
                   )}
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Watchlist Management - SECONDARY FEATURE */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">📋 Watchlist Management</h3>
+          
+          <div className="flex items-center space-x-2 mb-4">
+            <input
+              type="text"
+              placeholder="Enter symbol (e.g., AAPL)"
+              value={newSymbol}
+              onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+              onKeyPress={(e) => e.key === 'Enter' && addToWatchlist()}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              onClick={() => addToWatchlist()}
+              className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {watchlist.map((symbol) => (
+              <div key={symbol} className="flex items-center space-x-1 bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                <span className="font-medium">{symbol}</span>
+                <button
+                  onClick={() => removeFromWatchlist(symbol)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
             ))}
           </div>
-        )}
+
+          {dbStats && (
+            <div className="mt-4 text-sm text-gray-600">
+              Database: {dbStats.total_stocks} stocks • {dbStats.total_recommendations} historical recommendations • {dbStats.total_prices} price records
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
         <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
