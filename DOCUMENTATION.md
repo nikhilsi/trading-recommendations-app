@@ -466,3 +466,23 @@ REDIS_URL=redis://redis:6379           # Auto-configured
 
 **Last Updated:** May 29, 2025  
 **Version:** 1.0
+
+## Recent Updates (May 2025)
+
+### Frontend Refactoring ✅
+- Transformed monolithic App.js (600+ lines) into modular architecture
+- Created reusable components organized by feature
+- Implemented custom hooks for business logic
+- Separated API calls into service layer
+- Result: 87-line App.js with clear separation of concerns
+
+### New Frontend Structure
+frontend/src/
+├── components/
+│   ├── common/          # Shared components
+│   ├── market-scanner/  # Market scanner feature
+│   ├── recommendations/ # AI recommendations feature
+│   └── watchlist/       # Watchlist management
+├── hooks/               # Custom React hooks
+├── services/            # API integration
+└── utils/               # Helper functions
