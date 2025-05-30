@@ -8,7 +8,7 @@ import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
-from .market_data_service import MarketDataService
+from .polygon_service import PolygonService
 from .database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class RecommendationService:
     """
     
     def __init__(self, api_key: str):
-        self.market_data_service = MarketDataService(api_key)
+        self.polygon_service = PolygonService(api_key)  # NEW
         self.database_service = DatabaseService()
         
         # Configuration
@@ -125,14 +125,17 @@ class RecommendationService:
             }
     
     def _analyze_single_stock(self, symbol: str, confidence_threshold: int) -> Optional[Dict[str, Any]]:
-        """
-        Analyze a single stock and generate recommendation if it meets criteria
-        """
+        """Analyze a single stock using Polygon data"""
         try:
             logger.info(f"Analyzing {symbol}...")
             
-            # Get current quote
-            quote = self.market_data_service.get_current_quote(symbol)
+            # Use Polygon instead of market_data_service
+            if hasattr(self, 'polygon_service'):
+                quote = self.polygon_service.get_stock_snapshot(symbol)
+            else:
+                # Fallback to old service if exists
+                quote = self.market_data_service.get_current_quote(symbol)
+                
             if not quote:
                 logger.warning(f"No quote data available for {symbol}")
                 return None

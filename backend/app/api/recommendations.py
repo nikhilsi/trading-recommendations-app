@@ -23,11 +23,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["recommendations"])
 
 # Dependency to get recommendation service
+# Replace the old get_recommendation_service function with:
 def get_recommendation_service():
-    api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="API key not configured")
-    return RecommendationService(api_key)
+    polygon_key = os.getenv('POLYGON_API_KEY')
+    if polygon_key:
+        # Use the new Enhanced service with Polygon!
+        from services.enhanced_recommendation_service import EnhancedRecommendationService
+        return EnhancedRecommendationService(polygon_key)
+    else:
+        # Fallback to old service
+        api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="No API keys configured")
+        from services.recommendation_service import RecommendationService
+        return RecommendationService(api_key)
 
 # Dependency to get database service
 def get_database_service():

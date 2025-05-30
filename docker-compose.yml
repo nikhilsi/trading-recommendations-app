@@ -33,7 +33,6 @@ services:
     environment:
       - DATABASE_URL=postgresql://trading_user:trading_password123@postgres:5432/trading_app
       - REDIS_URL=redis://redis:6379
-      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
       - POLYGON_API_KEY=${POLYGON_API_KEY}  
     
     ports:

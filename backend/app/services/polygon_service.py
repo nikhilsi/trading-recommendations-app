@@ -119,3 +119,92 @@ class PolygonService:
             'total_symbols': 0,
             'timestamp': datetime.now().isoformat()
         }
+    
+    # backend/app/services/polygon_service.py
+
+    def get_stock_snapshot(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Get comprehensive stock data for a single symbol"""
+        try:
+            url = f"{self.base_url}/v2/snapshot/locale/us/markets/stocks/tickers/{symbol}?apiKey={self.api_key}"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                ticker = data.get('ticker', {})
+                
+                return {
+                    'symbol': symbol,
+                    'price': ticker.get('day', {}).get('c', 0),
+                    'open': ticker.get('day', {}).get('o', 0),
+                    'high': ticker.get('day', {}).get('h', 0),
+                    'low': ticker.get('day', {}).get('l', 0),
+                    'volume': ticker.get('day', {}).get('v', 0),
+                    'previous_close': ticker.get('prevDay', {}).get('c', 0),
+                    'change': ticker.get('day', {}).get('c', 0) - ticker.get('prevDay', {}).get('c', 0),
+                    'change_percent': ticker.get('todaysChangePerc', 0),
+                    'timestamp': datetime.now()
+                }
+        except Exception as e:
+            logger.error(f"Error getting snapshot for {symbol}: {e}")
+            return None
+
+    def get_historical_bars(self, symbol: str, days: int = 30) -> Optional[List[Dict]]:
+        """Get historical price bars from Polygon"""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            url = f"{self.base_url}/v2/aggs/ticker/{symbol}/range/1/day/{start_date.strftime('%Y-%m-%d')}/{end_date.strftime('%Y-%m-%d')}?apiKey={self.api_key}"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return [{
+                    'date': datetime.fromtimestamp(bar['t']/1000),
+                    'open': bar['o'],
+                    'high': bar['h'],
+                    'low': bar['l'],
+                    'close': bar['c'],
+                    'volume': bar['v']
+                } for bar in data.get('results', [])]
+        except Exception as e:
+            logger.error(f"Error getting historical data for {symbol}: {e}")
+            return None
+        
+    def get_stock_snapshot(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """Get comprehensive stock data for a single symbol"""
+        try:
+            url = f"{self.base_url}/v2/snapshot/locale/us/markets/stocks/tickers/{symbol}?apiKey={self.api_key}"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                ticker = data.get('ticker', {})
+                
+                if ticker and ticker.get('day'):
+                    day = ticker['day']
+                    prev_day = ticker.get('prevDay', {})
+                    
+                    return {
+                        'symbol': symbol,
+                        'price': day.get('c', 0),
+                        'open': day.get('o', 0),
+                        'high': day.get('h', 0),
+                        'low': day.get('l', 0),
+                        'volume': day.get('v', 0),
+                        'previous_close': prev_day.get('c', 0),
+                        'change': day.get('c', 0) - prev_day.get('c', 0),
+                        'change_percent': ticker.get('todaysChangePerc', 0),
+                        'timestamp': datetime.now()
+                    }
+            
+            logger.warning(f"No data for {symbol}")
+            return None
+        except Exception as e:
+            logger.error(f"Error getting snapshot for {symbol}: {e}")
+            return None
+
+    def validate_symbol(self, symbol: str) -> bool:
+        """Check if symbol exists"""
+        snapshot = self.get_stock_snapshot(symbol)
+        return snapshot is not None
