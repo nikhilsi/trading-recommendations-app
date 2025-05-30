@@ -366,7 +366,11 @@ async def health_check():
 async def scan_market(
     scan_type: str = "momentum",
     limit: int = 10,
-    source: str = "polygon"
+    source: str = "polygon",
+    min_price: float = 0,
+    max_price: float = 0,
+    min_volume: int = 0,
+    min_score: int = 30  # Now configurable!
 ):
     """Enhanced market scanner with multiple scan types"""
     try:
@@ -457,6 +461,26 @@ async def scan_market(
             yahoo = YahooDataService()
             opportunities = yahoo.scan_for_opportunities(scan_type)
         
+        # After getting opportunities, apply filters
+        filtered_opportunities = []
+        
+        for opp in opportunities:
+            # Price filter
+            if min_price > 0 and opp['price'] < min_price:
+                continue
+            if max_price > 0 and opp['price'] > max_price:
+                continue
+                
+            # Volume filter
+            if min_volume > 0 and opp.get('volume', 0) < min_volume:
+                continue
+                
+            # Score filter (now using the parameter)
+            if opp['score'] < min_score:
+                continue
+                
+            filtered_opportunities.append(opp)
+            
         # Add market stats to response
         market_stats = {}
         if source == "polygon" and 'market_data' in locals():
@@ -465,11 +489,22 @@ async def scan_market(
                 "data_freshness": market_data.get('timestamp')
             }
         
+        # Update return to show filter stats
         return {
-            "opportunities": opportunities[:limit],
+            "opportunities": filtered_opportunities[:limit],
             "scan_type": scan_type,
             "source": source,
-            "market_stats": market_stats,
+            "market_stats": {
+                "total_symbols_scanned": market_stats.get("total_symbols_scanned", 0) if 'market_stats' in locals() else 0,
+                "pre_filter_count": len(opportunities),
+                "post_filter_count": len(filtered_opportunities),
+                "filters_applied": {
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "min_volume": min_volume,
+                    "min_score": min_score
+                }
+            },
             "timestamp": datetime.utcnow().isoformat()
         }
         
