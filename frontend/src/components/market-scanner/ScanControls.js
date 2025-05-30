@@ -20,6 +20,7 @@ const ScanControls = ({
         <option value="volume">📊 Volume Movers</option>
         <option value="oversold">📉 Oversold Bounce</option>
         <option value="most_active">🔥 Most Active</option>
+        <option value="all">🌐 All Stocks (Requires Filters)</option>
       </select>
       
       <button

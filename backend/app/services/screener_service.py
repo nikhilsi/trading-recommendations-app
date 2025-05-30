@@ -3,6 +3,7 @@
 Professional stock screener with technical indicators
 """
 import logging
+import requests
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
@@ -14,25 +15,75 @@ logger = logging.getLogger(__name__)
 class ScreenerService:
     def __init__(self, polygon_api_key: str):
         self.polygon = PolygonService(polygon_api_key)
+        self.polygon_api_key = polygon_api_key
         self.ta = TechnicalAnalysisService()
         
     def screen_stocks(self, filters: Dict[str, Any]) -> Dict[str, Any]:
-        """Screen stocks based on multiple criteria"""
+        """
+        Screen stocks based on multiple criteria
+        
+        Filters:
+        - min_price, max_price: Price range
+        - volume_filter: '1m', '5m', '10m', 'unusual'
+        - change_filter: 'up5', 'up2', 'down2', 'down5'
+        - above_sma_20: Boolean
+        - above_sma_50: Boolean
+        - rsi_oversold: Boolean (RSI < 30)
+        - rsi_overbought: Boolean (RSI > 70)
+        - scan_type: Type of scan (momentum, volume, all, etc.)
+        """
         try:
-            # Get all market data
-            market_data = self.polygon.get_market_movers()
-            all_tickers = self._get_all_tickers(market_data)
+            scan_type = filters.get('scan_type', 'momentum')
             
-            # First pass: Basic filters
+            if scan_type == 'all':
+                # Get FULL market snapshot for "ALL" mode
+                logger.info("Fetching full market snapshot for ALL stocks...")
+                url = f"https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers?apiKey={self.polygon_api_key}"
+                response = requests.get(url)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    raw_tickers = data.get('tickers', [])
+                    
+                    # Convert all tickers to our format
+                    all_tickers = []
+                    for ticker_data in raw_tickers:
+                        if ticker_data.get('day') and ticker_data['day'].get('c'):
+                            day = ticker_data['day']
+                            prev_day = ticker_data.get('prevDay', {})
+                            
+                            if prev_day.get('c'):
+                                change = day['c'] - prev_day['c']
+                                change_pct = (change / prev_day['c']) * 100
+                                
+                                all_tickers.append({
+                                    'symbol': ticker_data['ticker'],
+                                    'price': day['c'],
+                                    'volume': day.get('v', 0),
+                                    'change': change,
+                                    'change_percent': change_pct
+                                })
+                    
+                    logger.info(f"Processing {len(all_tickers)} stocks for ALL mode")
+                else:
+                    logger.error("Failed to get full market snapshot")
+                    all_tickers = []
+            else:
+                # Use market movers for specific scan types
+                market_data = self.polygon.get_market_movers()
+                all_tickers = self._get_all_tickers(market_data)
+                logger.info(f"Processing {len(all_tickers)} stocks for {scan_type} scan")
+            
+            # First pass: Basic filters (price, volume, change)
             filtered_tickers = self._apply_basic_filters(all_tickers, filters)
             
-            # Second pass: Technical filters (if any)
+            # Second pass: Technical filters (if any selected)
             if self._has_technical_filters(filters):
                 filtered_tickers = self._apply_technical_filters(filtered_tickers, filters)
             
             # Format results to match scanner format
             formatted_results = []
-            for ticker in filtered_tickers:
+            for ticker in filtered_tickers[:100]:  # Limit processing to top 100
                 # Generate signals based on data
                 signals = []
                 change_pct = ticker.get('change_percent', 0)
@@ -74,7 +125,7 @@ class ScreenerService:
                     'volume': volume,
                     'score': score,
                     'signals': signals if signals else ['Matched filter criteria'],
-                    'scan_type': 'screener',
+                    'scan_type': scan_type,
                     'data_source': 'polygon'
                 })
             
@@ -85,7 +136,7 @@ class ScreenerService:
                 'results': formatted_results[:50],
                 'opportunities': formatted_results[:50],  # For compatibility
                 'total_screened': len(all_tickers),
-                'total_matched': len(formatted_results),
+                'total_matched': len(filtered_tickers),
                 'filters_applied': filters,
                 'timestamp': datetime.now().isoformat()
             }
@@ -93,6 +144,20 @@ class ScreenerService:
         except Exception as e:
             logger.error(f"Screener error: {e}")
             return {'results': [], 'opportunities': [], 'error': str(e)}
+    
+    def _get_all_tickers(self, market_data: Dict) -> List[Dict]:
+        """Extract all tickers from market data"""
+        all_tickers = []
+        
+        # Combine all categories
+        for category in ['gainers', 'losers', 'most_active', 'volume_movers']:
+            tickers = market_data.get(category, [])
+            for ticker in tickers:
+                # Avoid duplicates
+                if not any(t['symbol'] == ticker['symbol'] for t in all_tickers):
+                    all_tickers.append(ticker)
+        
+        return all_tickers
     
     def _apply_basic_filters(self, tickers: List[Dict], filters: Dict) -> List[Dict]:
         """Apply price, volume, and change filters"""
@@ -179,20 +244,6 @@ class ScreenerService:
         
         return results
     
-    def _get_all_tickers(self, market_data: Dict) -> List[Dict]:
-        """Extract all tickers from market data"""
-        all_tickers = []
-        
-        # Combine all categories
-        for category in ['gainers', 'losers', 'most_active', 'volume_movers']:
-            tickers = market_data.get(category, [])
-            for ticker in tickers:
-                # Avoid duplicates
-                if not any(t['symbol'] == ticker['symbol'] for t in all_tickers):
-                    all_tickers.append(ticker)
-        
-        return all_tickers
-
     def _has_technical_filters(self, filters: Dict) -> bool:
         """Check if any technical filters are enabled"""
         return any([
@@ -201,7 +252,7 @@ class ScreenerService:
             filters.get('rsi_oversold', False),
             filters.get('rsi_overbought', False)
         ])
-
+    
     def _score_and_sort(self, tickers: List[Dict]) -> List[Dict]:
         """Score and sort results by relevance"""
         for ticker in tickers:

@@ -16,8 +16,6 @@ const MarketScanner = ({
   onAddToWatchlist,
   watchlist 
 }) => {
-  console.log('MarketScanner marketStats:', marketStats);
-
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     minPrice: 0,
@@ -43,6 +41,13 @@ const MarketScanner = ({
                           filters.rsiOverbought;
 
   const handleScan = async () => {
+    // Validate "ALL" requires filters
+    if (scanType === 'all' && !hasActiveFilters) {
+      alert('Please apply at least one filter when screening all stocks. This helps narrow down 8000+ stocks to meaningful results.');
+      setShowFilters(true);  // Open filter panel
+      return;
+    }
+    
     // Close filters when scanning
     setShowFilters(false);
     
@@ -55,7 +60,8 @@ const MarketScanner = ({
         above_sma_20: filters.aboveSMA20 || false,
         above_sma_50: filters.aboveSMA50 || false,
         rsi_oversold: filters.rsiOversold || false,
-        rsi_overbought: filters.rsiOverbought || false
+        rsi_overbought: filters.rsiOverbought || false,
+        scan_type: scanType  // Include scan type in filters
       };
       
       console.log('Applying filters:', filterData);
@@ -79,6 +85,16 @@ const MarketScanner = ({
         lastScanTime={lastScanTime}
         hasActiveFilters={hasActiveFilters}
       />
+      
+      {/* Warning for ALL mode without filters */}
+      {scanType === 'all' && !showFilters && !hasActiveFilters && (
+        <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-3 text-sm">
+          <p className="text-amber-800">
+            ⚠️ <strong>All Stocks</strong> mode screens 8000+ stocks. 
+            Please apply filters to get meaningful results.
+          </p>
+        </div>
+      )}
       
       <FilterPanel
         show={showFilters}
