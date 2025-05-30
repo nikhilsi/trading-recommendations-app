@@ -5,9 +5,11 @@ Market scanner endpoints
 from fastapi import APIRouter, HTTPException, Query
 from datetime import datetime
 import logging
+from typing import List, Dict, Any, Optional  
 
 from services.yahoo_data_service import YahooDataService
 from services.polygon_service import PolygonService
+from services.screener_service import ScreenerService  
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -171,3 +173,33 @@ def apply_filters(opportunities: list, min_price: float, max_price: float,
         filtered.append(opp)
     
     return filtered
+
+@router.post("/screen")
+async def screen_stocks(
+    filters: Dict[str, Any],
+    source: str = Query("polygon", description="Data source")
+):
+    """
+    Professional stock screener with multiple filters
+    
+    Example filters:
+    {
+        "min_price": 10,
+        "max_price": 100,
+        "volume_filter": "1m",
+        "change_filter": "up2",
+        "above_sma_20": true,
+        "rsi_oversold": true
+    }
+    """
+    try:
+        if source == "polygon" and settings.POLYGON_API_KEY:
+            screener = ScreenerService(settings.POLYGON_API_KEY)
+            results = screener.screen_stocks(filters)
+            return results
+        else:
+            raise HTTPException(status_code=400, detail="Polygon API required for screener")
+            
+    except Exception as e:
+        logger.error(f"Screener error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

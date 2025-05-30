@@ -6,7 +6,8 @@ const ScanControls = ({
   onScanTypeChange, 
   onScan, 
   loading, 
-  lastScanTime 
+  lastScanTime,
+  hasActiveFilters  // Add this prop
 }) => {
   return (
     <div className="flex items-center space-x-4 mb-4">
@@ -31,12 +32,14 @@ const ScanControls = ({
         ) : (
           <Activity className="w-4 h-4" />
         )}
-        <span>{loading ? 'Scanning...' : 'Scan Market'}</span>
+        <span>
+          {loading ? 'Screening...' : hasActiveFilters ? 'Screen Market' : 'Scan Market'}
+        </span>
       </button>
       
       {lastScanTime && (
         <span className="text-sm text-gray-500">
-          Last scan: {lastScanTime.toLocaleTimeString()}
+          Last {hasActiveFilters ? 'screen' : 'scan'}: {lastScanTime.toLocaleTimeString()}
         </span>
       )}
     </div>
