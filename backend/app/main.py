@@ -362,53 +362,91 @@ async def health_check():
         )
 
 # Market scanner endpoint
-# Market scanner endpoint - UPDATE this existing endpoint
 @app.get("/api/market/scan", tags=["market"])
 async def scan_market(
     scan_type: str = "momentum",
     limit: int = 10,
-    source: str = "polygon"  # Add source parameter
+    source: str = "polygon"
 ):
-    """Scan market for opportunities using multiple sources"""
+    """Enhanced market scanner with multiple scan types"""
     try:
         if source == "polygon":
             from services.polygon_service import PolygonService
             polygon = PolygonService()
             
-            # Get market snapshot
-            snapshot = polygon.get_market_snapshot()
+            # Get comprehensive market data
+            market_data = polygon.get_market_movers()
             
-            # Convert to opportunities format
             opportunities = []
             
             if scan_type == "momentum":
-                # Use gainers for momentum
-                for stock in snapshot['gainers'][:limit]:
+                # High momentum gainers
+                for stock in market_data['gainers'][:limit]:
                     opportunities.append({
                         'symbol': stock['symbol'],
                         'price': round(stock['price'], 2),
                         'change_percent': round(stock['change_percent'], 2),
-                        'volume_ratio': 0,  # Polygon doesn't provide avg volume
-                        'score': int(50 + stock['change_percent'] * 5),  # Dynamic score
+                        'volume': stock['volume'],
+                        'score': min(95, int(50 + stock['change_percent'] * 5)),
                         'signals': [
-                            f"Top gainer: +{stock['change_percent']:.1f}%",
-                            f"Volume: {stock['volume']:,}"
+                            f"Strong momentum: +{stock['change_percent']:.1f}%",
+                            f"Volume: {stock['volume']:,}",
+                            "Top market gainer"
                         ],
                         'scan_type': scan_type,
                         'data_source': 'polygon'
                     })
-            elif scan_type == "oversold":
-                # Use losers for oversold
-                for stock in snapshot['losers'][:limit]:
+                    
+            elif scan_type == "volume":
+                # Volume movers
+                for stock in market_data['volume_movers'][:limit]:
                     opportunities.append({
                         'symbol': stock['symbol'],
                         'price': round(stock['price'], 2),
                         'change_percent': round(stock['change_percent'], 2),
-                        'volume_ratio': 0,
-                        'score': int(50 + abs(stock['change_percent']) * 3),
+                        'volume': stock['volume'],
+                        'score': min(90, int(60 + abs(stock['change_percent']) * 3)),
                         'signals': [
-                            f"Oversold: {stock['change_percent']:.1f}%",
-                            "Potential bounce candidate"
+                            f"High volume: {stock['volume']:,}",
+                            f"Price movement: {stock['change_percent']:+.1f}%",
+                            "Unusual activity detected"
+                        ],
+                        'scan_type': scan_type,
+                        'data_source': 'polygon'
+                    })
+                    
+            elif scan_type == "oversold":
+                # Biggest losers (potential bounce)
+                for stock in market_data['losers'][:limit]:
+                    if stock['change_percent'] < -3:  # Only significant drops
+                        opportunities.append({
+                            'symbol': stock['symbol'],
+                            'price': round(stock['price'], 2),
+                            'change_percent': round(stock['change_percent'], 2),
+                            'volume': stock['volume'],
+                            'score': min(80, int(40 + abs(stock['change_percent']) * 4)),
+                            'signals': [
+                                f"Oversold: {stock['change_percent']:.1f}%",
+                                "Potential bounce candidate",
+                                f"Volume: {stock['volume']:,}"
+                            ],
+                            'scan_type': scan_type,
+                            'data_source': 'polygon'
+                        })
+                        
+            elif scan_type == "most_active":
+                # Highest volume stocks
+                for stock in market_data['most_active'][:limit]:
+                    opportunities.append({
+                        'symbol': stock['symbol'],
+                        'price': round(stock['price'], 2),
+                        'change_percent': round(stock['change_percent'], 2),
+                        'volume': stock['volume'],
+                        'score': 70,
+                        'signals': [
+                            f"Most traded: {stock['volume']:,} shares",
+                            f"Price change: {stock['change_percent']:+.1f}%",
+                            "High market interest"
                         ],
                         'scan_type': scan_type,
                         'data_source': 'polygon'
@@ -419,12 +457,22 @@ async def scan_market(
             yahoo = YahooDataService()
             opportunities = yahoo.scan_for_opportunities(scan_type)
         
+        # Add market stats to response
+        market_stats = {}
+        if source == "polygon" and 'market_data' in locals():
+            market_stats = {
+                "total_symbols_scanned": market_data.get('total_symbols', 0),
+                "data_freshness": market_data.get('timestamp')
+            }
+        
         return {
             "opportunities": opportunities[:limit],
             "scan_type": scan_type,
             "source": source,
+            "market_stats": market_stats,
             "timestamp": datetime.utcnow().isoformat()
         }
+        
     except Exception as e:
         logger.error(f"Market scan error: {e}")
         # Fallback to Yahoo on error
@@ -435,7 +483,8 @@ async def scan_market(
             "opportunities": opportunities[:limit],
             "scan_type": scan_type,
             "source": "yahoo_fallback",
-            "error": str(e)
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
         }
 
 # Global exception handler

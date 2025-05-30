@@ -26,6 +26,7 @@ function App() {
   const [scanType, setScanType] = useState('momentum');
   const [scanLoading, setScanLoading] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(null);
+  const [marketStats, setMarketStats] = useState(null);
 
   const fetchRecommendations = async () => {
     try {
@@ -60,15 +61,18 @@ function App() {
       setScanLoading(true);
       setError(null);
       
-      // Use Polygon as primary source
       const response = await axios.get(`${API_BASE}/api/market/scan?scan_type=${scanType}&limit=15&source=polygon`);
       
       console.log('Scanner response:', response.data);
       
       if (response.data && response.data.opportunities) {
-        console.log('Setting opportunities:', response.data.opportunities);
         setMarketOpportunities(response.data.opportunities);
         setLastScanTime(new Date());
+        
+        // Capture market stats
+        if (response.data.market_stats) {
+          setMarketStats(response.data.market_stats);
+        }
       }
     } catch (err) {
       console.error('Market scan error:', err);
@@ -254,9 +258,10 @@ function App() {
               onChange={(e) => setScanType(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="momentum">Momentum Stocks</option>
-              <option value="volume">Volume Spikes</option>
-              <option value="oversold">Oversold Opportunities</option>
+              <option value="momentum">🚀 Momentum Gainers</option>
+              <option value="volume">📊 Volume Movers</option>
+              <option value="oversold">📉 Oversold Bounce</option>
+              <option value="most_active">🔥 Most Active</option>
             </select>
             
             <button
@@ -279,6 +284,12 @@ function App() {
             )}
           </div>
           
+          {marketStats && marketStats.total_symbols_scanned > 0 && (
+            <div className="mt-2 text-sm text-gray-600">
+              Scanned {marketStats.total_symbols_scanned.toLocaleString()} stocks across entire market
+            </div>
+          )}
+          
           {/* Display scan results */}
           {marketOpportunities.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -288,6 +299,12 @@ function App() {
                     <div>
                       <span className="font-bold text-lg">{opp.symbol}</span>
                       <p className="text-sm text-gray-600">Score: {opp.score}</p>
+                      {/* Add data source badge */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        opp.data_source === 'polygon' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {opp.data_source === 'polygon' ? '🔷 Polygon' : '📊 Yahoo'}
+                      </span>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">${opp.price}</p>
