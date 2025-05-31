@@ -1,322 +1,248 @@
-# Trading Recommendations App
+# Trading Intelligence Platform
 
-A professional stock trading recommendations application with real-time market data analysis, technical indicators, and comprehensive database persistence.
+A professional, invite-only stock trading platform with real-time market scanning, AI-powered recommendations, and advanced technical analysis.
 
 ## 🚀 Features
 
-- **Real-time Market Data**: Integration with Alpha Vantage API for live stock prices
-- **Technical Analysis**: RSI, moving averages, momentum indicators, and volume analysis
-- **Smart Recommendations**: AI-powered BUY/SELL signals with confidence scoring
-- **Dynamic Controls**: Customizable confidence thresholds and recommendation limits
-- **Watchlist Management**: Persistent stock monitoring with database storage
-- **Professional UI**: Clean, responsive React dashboard with real-time updates
-- **Database Persistence**: Historical recommendation tracking and performance analysis
-- **Rate Limiting**: Intelligent API usage optimization with fallback mechanisms
+### Core Features
+- **🔍 Market Scanner**: Analyze 8,000+ stocks in real-time
+- **🤖 AI Recommendations**: Intelligent trading signals based on technical analysis
+- **📊 Advanced Screener**: Professional filters for price, volume, and technical indicators
+- **📈 User Watchlists**: Personalized stock monitoring
+- **🔐 Secure Authentication**: JWT-based auth with invite-only registration
+- **👥 Multi-User Support**: Individual user data isolation
+- **🎨 Professional UI**: Responsive React dashboard with Tailwind CSS
+
+### Technical Capabilities
+- Real-time market data from Polygon.io (8,000+ stocks)
+- Fallback to Yahoo Finance for free tier
+- Technical indicators (RSI, SMA, momentum)
+- Volume analysis and unusual activity detection
+- Historical data tracking and persistence
+- Email notifications for invites
 
 ## 🛠️ Technology Stack
 
 ### Backend
-- **FastAPI**: Modern, fast web framework with automatic API documentation
-- **Python 3.11+**: Latest performance optimizations
-- **PostgreSQL**: Robust relational database for data persistence
-- **SQLAlchemy**: Professional ORM with migration support
-- **Redis**: Caching and session management
-- **Pydantic**: Data validation and serialization
+- **FastAPI** - Modern Python web framework
+- **PostgreSQL** - Primary database with full user isolation
+- **Redis** - Caching and session management
+- **SQLAlchemy** - ORM with migrations
+- **JWT** - Secure authentication
+- **Docker** - Containerized deployment
 
 ### Frontend
-- **React 18**: Modern UI framework with hooks
-- **Tailwind CSS**: Utility-first CSS framework
-- **Axios**: HTTP client for API communication
-- **Lucide React**: Beautiful, customizable icons
+- **React 18** - UI framework
+- **Tailwind CSS** - Utility-first styling
+- **Axios** - HTTP client
+- **Context API** - State management
+- **Lucide Icons** - Beautiful icons
 
-### Infrastructure
-- **Docker**: Containerized deployment
-- **Docker Compose**: Multi-service orchestration
-- **Nginx**: Reverse proxy and load balancing (production)
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND LAYER                            │
-│  React Dashboard (Port 3000)                                       │
-│  ├── Real-time price updates                                        │
-│  ├── Dynamic recommendation controls                                │
-│  ├── Watchlist management                                           │
-│  └── Performance analytics                                          │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ HTTP/WebSocket
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        API GATEWAY LAYER                           │
-│  FastAPI Server (Port 8000)                                        │
-│  ├── Authentication middleware                                      │
-│  ├── Rate limiting                                                  │
-│  ├── Input validation                                               │
-│  └── Error handling                                                 │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       BUSINESS LOGIC LAYER                         │
-│  Services Architecture                                              │
-│  ├── RecommendationService (Main orchestrator)                     │
-│  ├── MarketDataService (Alpha Vantage integration)                 │
-│  ├── TechnicalAnalysisService (Indicators & signals)               │
-│  └── DatabaseService (Data persistence)                            │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         DATA STORAGE LAYER                         │
-│  PostgreSQL Database + Redis Cache                                 │
-│  ├── Stock prices and historical data                              │
-│  ├── Recommendations and performance tracking                      │
-│  ├── User preferences and watchlists                               │
-│  └── Technical indicators and analysis results                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+### Data Providers
+- **Polygon.io** - Professional market data ($29/month)
+- **Yahoo Finance** - Free fallback provider
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
-- Alpha Vantage API key (free tier available)
-- 4GB+ RAM recommended
+- Polygon.io API key (recommended) or use Yahoo Finance fallback
+- Gmail account for sending invites (optional)
 
 ### Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd trading-app
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Alpha Vantage API key
-   ```
-
-3. **Start the application**
-   ```bash
-   # Complete setup (first time)
-   ./scripts/dev/reset.sh
-   
-   # Or quick start
-   docker-compose up -d
-   ```
-
-4. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
-
-## 📚 Usage
-
-### Basic Workflow
-
-1. **Configure Settings**: Adjust confidence threshold and max recommendations
-2. **Manage Watchlist**: Add/remove stocks you want to monitor
-3. **Generate Recommendations**: Click "Start Analysis" for AI-powered suggestions
-4. **Review Results**: Analyze recommendations with detailed reasoning and metrics
-5. **Track Performance**: Monitor historical recommendation accuracy
-
-### API Usage
-
 ```bash
-# Get recommendations
-curl "http://localhost:8000/api/recommendations?confidence_threshold=70&max_recommendations=5"
-
-# Manage watchlist
-curl -X POST "http://localhost:8000/api/watchlist" \
-     -H "Content-Type: application/json" \
-     -d '{"symbol": "AAPL"}'
-
-# View statistics
-curl "http://localhost:8000/api/stats"
+git clone https://github.com/nikhilsi/trading-intelligence.git
+cd trading-intelligence
 ```
 
-## 🛠️ Development
+2. **Configure environment**
+```bash
+cp .env.example .env
+# Edit .env with your API keys and configuration
+```
+
+3. **Run database migrations**
+```bash
+# First, start the database
+docker-compose up -d postgres
+
+# Apply authentication migration
+docker-compose exec postgres psql -U trading_user -d trading_app < database/migrations/001_add_authentication.sql
+```
+
+4. **Create admin user and initial invites**
+```bash
+# Start all services
+docker-compose up -d
+
+# Run setup script
+docker-compose exec backend python app/setup_auth.py
+```
+
+5. **Access the application**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
+
+## 📧 Email Configuration (Optional)
+
+To enable email invitations, add these to your `.env`:
+
+```env
+# Gmail SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-specific-password
+FROM_EMAIL=your-email@gmail.com
+FROM_NAME=Trading Intelligence
+APP_URL=http://localhost:3000
+```
+
+### Getting Gmail App Password:
+1. Go to https://myaccount.google.com/security
+2. Enable 2-factor authentication
+3. Go to "App passwords"
+4. Generate a password for "Mail"
+5. Use that password as SMTP_PASSWORD
+
+## 👤 User Management
+
+### Creating Users
+This is an invite-only platform. To create new users:
+
+1. **As Admin**: 
+   - Login to the platform
+   - Click "Admin" button
+   - Go to Invites tab
+   - Click "Create Invite"
+   - Share the 8-character code
+
+2. **Via API**:
+```bash
+curl -X POST http://localhost:8000/auth/invites \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"expires_in_days": 7, "email": "newuser@example.com"}'
+```
+
+### User Tiers
+- **Free**: 20 stocks watchlist, 50 scans/day
+- **Premium**: Coming soon
+- **Enterprise**: Unlimited everything (admin users)
+
+## 📚 API Usage
+
+### Authentication Required Endpoints
+
+All `/api/*` endpoints now require authentication except market scanning:
+
+```bash
+# Login
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password"}'
+
+# Use the token
+curl http://localhost:8000/api/watchlist \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Public Endpoints
+- `POST /auth/register` - Register with invite code
+- `POST /auth/login` - Login
+- `GET /api/market/scan` - Market scanner (works without auth)
+- `GET /health` - Health check
+
+## 🔧 Development
+
+### Running Locally
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+
+# Restart after code changes
+docker-compose restart backend
+
+# Run database shell
+docker-compose exec postgres psql -U trading_user -d trading_app
+```
 
 ### Project Structure
 ```
-trading-app/
-├── backend/                 # FastAPI backend
+trading-intelligence/
+├── backend/
 │   ├── app/
-│   │   ├── api/            # API endpoints
-│   │   ├── models/         # Database models
-│   │   ├── schemas/        # Pydantic schemas
-│   │   ├── services/       # Business logic
-│   │   └── main.py         # Application entry point
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/               # React frontend
+│   │   ├── api/          # API endpoints
+│   │   ├── models/       # Database models
+│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── services/     # Business logic
+│   │   └── core/         # Auth, config, security
+├── frontend/
 │   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── services/       # API integration
-│   │   └── App.js          # Main application
-│   ├── Dockerfile
-│   └── package.json
-├── database/               # Database initialization
-├── scripts/                # Utility scripts
-├── docker-compose.yml      # Service orchestration
-└── README.md
+│   │   ├── components/   # React components
+│   │   ├── contexts/     # Auth context
+│   │   ├── hooks/        # Custom hooks
+│   │   └── pages/        # Page components
+├── database/
+│   └── migrations/       # SQL migrations
+└── scripts/              # Utility scripts
 ```
-
-### Development Scripts
-
-```bash
-# Complete reset and rebuild
-./scripts/dev/reset.sh
-
-# Quick restart after code changes
-./scripts/dev/quick-restart.sh
-
-# Check system status
-./scripts/dev/status.sh
-
-# View logs
-./scripts/dev/logs.sh backend
-
-# Test all APIs
-./scripts/dev/test-api.sh
-```
-
-See [scripts/README.md](scripts/README.md) for complete documentation.
-
-### Adding New Features
-
-1. **Backend**: Add new services in `backend/app/services/`
-2. **API**: Add endpoints in `backend/app/api/`
-3. **Frontend**: Add components in `frontend/src/components/`
-4. **Database**: Add models in `backend/app/models/`
-
-## 🧪 Testing
-
-```bash
-# Test API endpoints
-./scripts/dev/test-api.sh
-
-# Manual testing
-curl http://localhost:8000/health
-```
-
-## 📊 Monitoring
-
-### Health Checks
-- Backend Health: http://localhost:8000/health
-- Database Status: http://localhost:8000/api/stats
-- Service Status: `./scripts/dev/status.sh`
-
-### Performance Metrics
-- API Response Times: Built-in FastAPI metrics
-- Database Statistics: Available via `/api/stats` endpoint
-- Recommendation Accuracy: Historical tracking in database
-
-## 🚀 Deployment
-
-### Development
-```bash
-docker-compose up -d
-```
-
-### Production
-```bash
-./scripts/production/deploy.sh
-```
-
-### Environment Variables
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ALPHA_VANTAGE_API_KEY` | Alpha Vantage API key | Yes | - |
-| `DATABASE_URL` | PostgreSQL connection string | No | Auto-generated |
-| `REDIS_URL` | Redis connection string | No | Auto-generated |
-| `ENVIRONMENT` | Deployment environment | No | `development` |
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Code Style
-- Python: Follow PEP 8, use Black formatter
-- JavaScript: Use Prettier formatter
-- Commit messages: Use conventional commits format
-
-## 📋 Roadmap
-
-### Current Features ✅
-- [x] Real-time market data integration
-- [x] Technical analysis and recommendations
-- [x] Watchlist management
-- [x] Professional UI/UX
-- [x] Database persistence
-- [x] Docker containerization
-
-### Planned Features 🚧
-- [ ] Advanced technical indicators (Bollinger Bands, MACD)
-- [ ] Portfolio tracking and performance analysis
-- [ ] Email/SMS alerts for high-confidence signals
-- [ ] Machine learning prediction models
-- [ ] Multi-user support with authentication
-- [ ] Mobile app (React Native)
-- [ ] Advanced charting and visualization
-
-### Future Enhancements 🔮
-- [ ] Options trading analysis
-- [ ] Cryptocurrency support
-- [ ] Social trading features
-- [ ] Advanced risk management tools
-- [ ] Integration with brokers for automated trading
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-**App won't start:**
+### Authentication Issues
 ```bash
-./scripts/dev/reset.sh  # Complete reset
+# Reset admin password
+docker-compose exec backend python
+>>> from models.database import SessionLocal
+>>> from models.auth import User
+>>> from core.security import get_password_hash
+>>> db = SessionLocal()
+>>> admin = db.query(User).filter(User.email == "admin@example.com").first()
+>>> admin.password_hash = get_password_hash("newpassword")
+>>> db.commit()
 ```
 
-**API rate limits:**
-- Free tier: 25 requests/day
-- Premium plans available at Alpha Vantage
-- App includes intelligent rate limiting and fallback mechanisms
-
-**Database connection issues:**
+### Database Issues
 ```bash
-docker-compose logs postgres  # Check database logs
-./scripts/dev/status.sh        # Overall health check
+# Complete database reset
+docker-compose down -v
+docker-compose up -d
+# Re-run migrations and setup
 ```
 
-**Performance issues:**
-- Reduce confidence threshold for faster results
-- Limit watchlist size
-- Check Docker resource allocation
+### Port Conflicts
+```bash
+# Change ports in docker-compose.yml
+# Frontend: 3000 → 3001
+# Backend: 8000 → 8001
+# Database: 5432 → 5433
+```
+
+## 🚀 Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment instructions.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- [Alpha Vantage](https://www.alphavantage.co/) for market data API
-- [FastAPI](https://fastapi.tiangolo.com/) for the excellent web framework
+- [Polygon.io](https://polygon.io) for professional market data
+- [FastAPI](https://fastapi.tiangolo.com/) for the excellent framework
 - [React](https://reactjs.org/) for the frontend framework
-- [Tailwind CSS](https://tailwindcss.com/) for styling utilities
 
-## 📞 Support
+## ⚠️ Disclaimer
 
-- 📖 Documentation: See [scripts/README.md](scripts/README.md) for utility scripts
-- 🐛 Issues: Open an issue on GitHub
-- 💬 Discussions: Use GitHub Discussions for questions
+This platform is for educational and research purposes only. Trading involves substantial risk and may not be suitable for all investors. Always conduct your own research and consider your risk tolerance before making investment decisions.
 
 ---
 
-**⚠️ Disclaimer**: This application is for educational and research purposes only. Trading involves substantial risk and may not be suitable for all investors. Always conduct your own research and consider your risk tolerance before making investment decisions.
+Built with ❤️ by Nikhil Singhal

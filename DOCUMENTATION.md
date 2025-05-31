@@ -1,406 +1,393 @@
-# Trading Recommendations App - Complete Project Documentation
+# Trading Intelligence Platform - Technical Documentation
 
-## 📋 Executive Summary
+## Table of Contents
+1. [Architecture Overview](#architecture-overview)
+2. [Authentication System](#authentication-system)
+3. [API Reference](#api-reference)
+4. [Database Schema](#database-schema)
+5. [Frontend Architecture](#frontend-architecture)
+6. [Security Considerations](#security-considerations)
+7. [Deployment Guide](#deployment-guide)
 
-**Project Name:** Trading Recommendations App  
-**Developer:** Nikhil Singhal  
-**Repository:** https://github.com/nikhilsi/trading-recommendations-app  
-**Current Status:** Active Development - Professional Features Complete  
-**Last Updated:** May 30, 2025
-
-## 🎯 Problem Statement
-
-The project aims to solve the fundamental challenge faced by retail traders: **"How do I find good stocks to trade from thousands of options in the market?"**
-
-Traditional approaches require:
-- Manual scanning through hundreds of stocks
-- Expensive Bloomberg terminals or professional tools
-- Hours of daily market analysis
-- Deep technical knowledge
-
-**Our Solution:** An intelligent stock scanner/screener that automatically finds trading opportunities across the entire market, combined with AI-powered recommendations.
-
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   Frontend (React)                          │
-│  - Market Scanner/Screener (Primary)                        │
-│  - AI Recommendations (Secondary)                           │
-│  - Watchlist Management                                     │
+│  - Authentication (JWT)                                     │
+│  - Market Scanner/Screener                                  │
+│  - AI Recommendations                                       │
+│  - User Dashboard                                           │
+│  - Admin Panel                                              │
 └─────────────────────────────────────────────────────────────┘
+                            │
+                      HTTPS + JWT Auth
                             │
 ┌─────────────────────────────────────────────────────────────┐
 │                   Backend (FastAPI)                         │
+│  - JWT Authentication & Authorization                       │
 │  - RESTful API                                              │
-│  - Multi-provider data aggregation                          │
-│  - Technical analysis engine                                │
-│  - Professional screener service                            │
+│  - WebSocket Support (future)                               │
+│  - Email Service                                            │
+│  - Rate Limiting                                            │
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
-│                   Data Providers                            │
-│  - Polygon.io ($29/month) - Primary: 8,000+ stocks        │
-│  - Yahoo Finance (Free) - Fallback: 50 stocks             │
-│  - ~~Alpha Vantage~~ - REMOVED (was rate-limited)         │
+│                   Service Layer                             │
+│  - RecommendationService                                    │
+│  - MarketDataService (Polygon/Yahoo)                        │
+│  - TechnicalAnalysisService                                 │
+│  - DatabaseService                                          │
+│  - EmailService                                             │
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
-│              Data Storage (PostgreSQL + Redis)              │
-│  - Historical recommendations                               │
-│  - Watchlist persistence                                    │
-│  - Price history                                            │
+│              Data Layer (PostgreSQL + Redis)                │
+│  - User data with row-level security                        │
+│  - Watchlists (per user)                                    │
+│  - Recommendations (per user)                               │
+│  - Session management                                       │
+│  - Rate limiting                                            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## ✅ Completed Milestones
+## Authentication System
 
-### Milestone 1: Yahoo Finance Integration ✅
-- **What:** Free market data integration
-- **Benefit:** Proof of concept with 50 stocks
-- **Status:** Complete - Used as fallback provider
+### Overview
+The platform uses JWT-based authentication with refresh tokens and an invite-only registration system.
 
-### Milestone 2: Frontend Market Scanner ✅
-- **What:** Professional UI for market scanning
-- **Features:**
-  - Dynamic scan types (Momentum, Volume, Oversold, Most Active, **ALL**)
-  - Real-time results display
-  - Add to watchlist functionality
-  - Mobile-responsive design
+### Authentication Flow
 
-### Milestone 3: Polygon.io Integration ✅
-- **What:** Professional market data provider
-- **Cost:** $29/month
-- **Benefits:**
-  - Scan 8,000+ stocks (entire US market)
-  - Real-time data
-  - No rate limits
-  - Multiple scan strategies
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Database
 
-### Milestone 4: Professional Stock Screener ✅
-- **Advanced Filtering System:**
-  - Price range filters ($min - $max)
-  - Volume thresholds (1M, 5M, 10M shares)
-  - Price change % filters (up/down 2%, 5%)
-  - Technical indicators (RSI, SMA 20/50)
-  - Market statistics display
-- **UI/UX Improvements:**
-  - "Scan Market" vs "Screen Market" dynamic button
-  - Filter panel with auto-close
-  - Active filter indicators
-  - Data source badges
-
-### Milestone 5: Recommendation System Migration ✅
-- **Migrated from Alpha Vantage to Polygon.io**
-  - Removed 12-second rate limiting
-  - Analyze watchlist instantly (was 2 minutes for 8 stocks)
-  - Better data quality
-  - Created EnhancedRecommendationService
-- **Improved Scoring Logic**
-  - More reasonable thresholds (1.5% vs 3%)
-  - Better confidence calculations
-  - Realistic target prices
-
-## 🔧 Technical Stack
-
-### Backend
-- **FastAPI** - Modern Python web framework
-- **PostgreSQL** - Primary database
-- **Redis** - Caching layer
-- **SQLAlchemy** - ORM
-- **Docker** - Containerization
-
-### Frontend
-- **React 18** - UI framework
-- **Tailwind CSS** - Styling
-- **Axios** - HTTP client
-- **Lucide React** - Icons
-
-### Data Providers
-- **Polygon.io** - Primary market data (PAID: $29/month)
-- **Yahoo Finance** - Free fallback
-- ~~**Alpha Vantage**~~ - Removed (was too limited)
-
-## 📊 Current Features
-
-### 1. Market Scanner/Screener (Primary Feature)
-- **Scan Types:**
-  - 🚀 **Momentum Gainers** - Stocks with strong upward movement
-  - 📊 **Volume Movers** - Unusual volume activity
-  - 📉 **Oversold Bounce** - Potential reversal candidates
-  - 🔥 **Most Active** - Highest traded stocks
-  - 🌐 **All Stocks** - Screen entire market (8,000+ stocks, requires filters)
-
-- **Professional Filtering:**
-  - **Price Range**: Min/Max price filters
-  - **Volume**: Any, >1M, >5M, >10M shares
-  - **Price Change %**: Up/Down 2%, 5%
-  - **Technical Indicators**: 
-    - Price above 20-day SMA
-    - Price above 50-day SMA
-    - RSI Oversold (<30)
-    - RSI Overbought (>70)
-  - **Patterns** (Coming Soon): Triangle, Channel, Flag
-
-- **Smart UX:**
-  - Button shows "Scan Market" for quick scans
-  - Button shows "Screen Market" when filters active
-  - "All Stocks" mode requires filters (prevents overwhelming results)
-  - Auto-closes filter panel on scan/screen
-  - Shows match statistics: "X matches from Y stocks"
-
-### 2. AI Recommendations (Secondary Feature)
-- **Powered by Polygon.io** (not Alpha Vantage anymore!)
-- **No Rate Limiting** - Instant analysis
-- Technical analysis on watchlist stocks
-- Confidence scoring (0-100%)
-- Target prices and stop losses
-- Risk assessment
-- Analyzes YOUR watchlist, not random stocks
-
-### 3. Watchlist Management
-- Add/remove stocks
-- Persistent storage
-- Quick-add from scanner results
-- Used by recommendation engine
-
-### 4. Database Persistence
-- Historical recommendations
-- Performance tracking
-- Market statistics
-- Watchlist storage
-
-## 🛠️ API Endpoints Reference
-
-```python
-# Core endpoints
-GET  /                      # API info and health
-GET  /health               # Health check
-
-# Market Scanner/Screener
-GET  /api/market/scan      # Quick market scans
-  Query params:
-    - scan_type: momentum|volume|oversold|most_active|all
-    - limit: number of results
-    - source: polygon|yahoo
-
-POST /api/market/screen    # Professional screener with filters
-  Body: {
-    "min_price": 10,
-    "max_price": 100,
-    "volume_filter": "1m",
-    "change_filter": "up2",
-    "above_sma_20": true,
-    "rsi_oversold": false,
-    "scan_type": "all"  # Important for full market
-  }
-
-# AI Recommendations
-GET  /api/recommendations   # Get AI recommendations for watchlist
-  Query params:
-    - confidence_threshold: 20-90
-    - max_recommendations: 1-10
-
-# Watchlist
-GET  /api/watchlist        # Get watchlist
-POST /api/watchlist        # Add to watchlist
-  Body: {"symbol": "AAPL"}
-DELETE /api/watchlist/{symbol}  # Remove from watchlist
-
-GET  /api/stats            # Database statistics
+    User->>Frontend: Enter invite code + credentials
+    Frontend->>Backend: POST /auth/register
+    Backend->>Database: Validate invite code
+    Backend->>Database: Create user
+    Backend->>Frontend: Return JWT tokens
+    Frontend->>Frontend: Store tokens
+    Frontend->>Backend: API requests with Bearer token
+    Backend->>Backend: Validate JWT
+    Backend->>Frontend: Return data
 ```
 
-## 🔧 Data Structures
+### Token Management
 
-### Opportunity/Stock Object
-```javascript
+#### Access Token
+- **Lifetime**: 15 minutes
+- **Purpose**: API authentication
+- **Storage**: Memory/Redux (not localStorage for security)
+- **Refresh**: Automatic using refresh token
+
+#### Refresh Token
+- **Lifetime**: 7 days
+- **Purpose**: Get new access tokens
+- **Storage**: httpOnly cookie (recommended) or secure storage
+- **Revocation**: On logout or password change
+
+### Security Features
+- Password requirements: 8+ chars, 1 number, 1 special char
+- Bcrypt password hashing
+- Invite codes expire after 7 days
+- Session tracking with IP and user agent
+- Automatic token refresh with axios interceptors
+
+## API Reference
+
+### Authentication Endpoints
+
+#### Register New User
+```http
+POST /auth/register
+Content-Type: application/json
+
 {
-  symbol: "AAPL",
-  price: 189.50,
-  change_percent: 2.5,
-  volume: 52000000,
-  score: 75,
-  signals: [
-    "Up 2.5%",
-    "High volume: 52M",
-    "Matched filter criteria"
-  ],
-  scan_type: "screener",
-  data_source: "polygon"
+  "email": "user@example.com",
+  "password": "SecurePass123!",
+  "invite_code": "ABC12345"
+}
+
+Response: {
+  "access_token": "eyJ...",
+  "refresh_token": "...",
+  "token_type": "bearer",
+  "expires_in": 900
 }
 ```
 
-### Screener Response
-```javascript
+#### Login
+```http
+POST /auth/login
+Content-Type: application/json
+
 {
-  results: [...],           // Screened stocks
-  opportunities: [...],     // Same as results (compatibility)
-  total_screened: 8432,     // Total stocks checked
-  total_matched: 23,        // Stocks passing filters
-  filters_applied: {...},   // What filters were used
-  timestamp: "2025-05-30T..."
+  "email": "user@example.com",
+  "password": "SecurePass123!"
 }
 ```
 
-### Recommendation Object
-```javascript
+#### Refresh Token
+```http
+POST /auth/refresh
+Content-Type: application/json
+
 {
-  symbol: "AAPL",
-  company: "AAPL Inc",
-  action: "BUY",
-  current_price: 189.50,
-  target_price: 195.19,    // ~3% target
-  stop_loss: 185.71,       // ~2% stop
-  confidence: 75,
-  timeframe: "Day Trade",
-  risk_level: "Medium",
-  reasoning: [
-    "Positive momentum: +2.3%",
-    "Good volume: 45,234,123"
-  ],
-  generated_at: "2025-05-30T..."
+  "refresh_token": "..."
 }
 ```
 
-## 🚀 Usage Patterns
+### Protected Endpoints
 
-### Professional Stock Screening Flow
-1. **Quick Scan** (No filters):
-   - Select scan type (Momentum/Volume/etc)
-   - Click "Scan Market"
-   - Get top 15 results from ~60-100 stocks
+All endpoints require `Authorization: Bearer <token>` header.
 
-2. **Advanced Screen** (With filters):
-   - Click "Show Advanced Filters"
-   - Set criteria (price, volume, technical)
-   - Click "Screen Market"
-   - Get filtered results with match statistics
+#### Watchlist Management
+```http
+GET /api/watchlist - Get user's watchlist
+POST /api/watchlist - Add symbol
+DELETE /api/watchlist/{symbol} - Remove symbol
+```
 
-3. **Full Market Screen** ("All Stocks"):
-   - Select "All Stocks" from dropdown
-   - MUST apply filters (enforced by UI)
-   - Screens 8,000+ stocks
-   - Best for finding hidden opportunities
+#### Recommendations
+```http
+GET /api/recommendations?confidence_threshold=50&max_recommendations=5
+GET /api/recommendations/history?limit=50
+```
 
-### Recommendation Flow
-1. Build your watchlist (10-20 stocks)
-2. Click "Analyze Watchlist"
-3. Get instant AI recommendations (no more waiting!)
-4. Adjust confidence threshold as needed
+#### Market Scanner (Public)
+```http
+GET /api/market/scan?scan_type=momentum&limit=15
+POST /api/market/screen - Advanced screening with filters
+```
 
-### Best Practices
-- **Use "All Stocks"** with price/volume filters for discovery
-- **Use specific scans** (Momentum/Volume) for quick ideas
-- **Apply multiple filters** for quality over quantity
-- **Lower confidence threshold** to 20-30% for more signals
-- **Check during market hours** for best results
+### Admin Endpoints
 
-## 💡 Key Technical Decisions
+Requires `is_admin=true` on user account.
 
-### 1. Removed Alpha Vantage
-- **Problem:** 25 calls/day, 12-second delays
-- **Solution:** Migrated to Polygon.io for recommendations
-- **Result:** Instant analysis, better data
+```http
+POST /auth/invites - Create invite
+GET /auth/invites - List invites
+DELETE /auth/invites/{id} - Revoke invite
+```
 
-### 2. Professional Screener Architecture
-- **Separate endpoints:** `/scan` (quick) vs `/screen` (filtered)
-- **Smart filtering:** Backend handles all logic
-- **Type safety:** Proper float/int conversions
+## Database Schema
 
-### 3. UX-First Design
-- **Dynamic button text:** User knows if scanning or screening
-- **Required filters for "All":** Prevents overwhelming results
-- **Auto-close panels:** Cleaner interaction flow
-- **Match statistics:** Users see filter effectiveness
+### Core Tables
 
-### 4. Data Provider Strategy
-- **Primary:** Polygon.io (paid, professional)
-- **Fallback:** Yahoo Finance (free, limited)
-- **Removed:** Alpha Vantage (too restrictive)
+#### users
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    is_admin BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    email_verified BOOLEAN DEFAULT false,
+    email_verified_at TIMESTAMP
+);
+```
 
-## 🐛 Common Issues & Solutions
+#### watchlist (Multi-tenant)
+```sql
+CREATE TABLE watchlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol VARCHAR(10) NOT NULL,
+    user_id UUID REFERENCES users(id),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT true,
+    UNIQUE(user_id, symbol)
+);
+```
 
-### Issue: "0 stocks" shown in filter statistics
-**Solution:** Fixed in `useMarketScanner.js` - now properly reads `total_screened`
+#### invites
+```sql
+CREATE TABLE invites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(32) UNIQUE NOT NULL,
+    email VARCHAR(255),
+    created_by UUID REFERENCES users(id),
+    used_by UUID REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP,
+    notes TEXT
+);
+```
 
-### Issue: Empty screener results
-**Solution:** Lower thresholds in `_analyze_stock_fast`, better scoring logic
+### Data Isolation
+- All user-specific tables include `user_id` foreign key
+- API endpoints filter by authenticated user's ID
+- Row-level security prevents cross-user data access
 
-### Issue: Type errors in screener
-**Solution:** Added proper float/int conversions in `_apply_basic_filters`
+## Frontend Architecture
 
-### Issue: Recommendations too slow
-**Solution:** Migrated from Alpha Vantage to Polygon.io - instant now!
+### Component Structure
+```
+src/
+├── components/
+│   ├── auth/
+│   │   ├── LoginForm.js
+│   │   ├── RegisterForm.js
+│   │   └── ChangePassword.js
+│   ├── admin/
+│   │   ├── AdminPanel.js
+│   │   └── InviteManager.js
+│   ├── market-scanner/
+│   ├── recommendations/
+│   └── common/
+├── contexts/
+│   └── AuthContext.js
+├── hooks/
+│   ├── useAuth.js
+│   ├── useMarketScanner.js
+│   └── useRecommendations.js
+└── pages/
+    └── LoginPage.js
+```
 
-### Issue: "ALL" mode overwhelming
-**Solution:** Added filter requirement, shows warning if no filters
+### Auth Context
+```javascript
+const AuthContext = {
+  user: User | null,
+  isAuthenticated: boolean,
+  loading: boolean,
+  login: (email, password) => Promise<Result>,
+  register: (email, password, inviteCode) => Promise<Result>,
+  logout: () => void,
+  refreshAccessToken: () => Promise<string>
+}
+```
 
-## 📈 Performance Metrics
+### Protected Routes
+```javascript
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) return <LoadingSpinner />;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  
+  return children;
+}
+```
 
-### Current Performance
-- **Market Scan:** 2-3 seconds for 60-100 stocks
-- **Full Screen (ALL):** 5-8 seconds for 8,000+ stocks
-- **Recommendations:** <1 second (was 2 minutes!)
-- **Filter Processing:** <100ms client-side
-- **API Response:** <500ms average
+## Security Considerations
 
-### Data Coverage
-- **Polygon.io:** 8,000+ US stocks
-- **Yahoo Finance:** 50 pre-selected stocks
-- **Recommendations:** Your watchlist size
+### Best Practices Implemented
+1. **JWT Security**
+   - Short-lived access tokens (15 min)
+   - Refresh token rotation
+   - Token blacklisting on logout
 
-## 🔐 Configuration
+2. **Password Security**
+   - Bcrypt hashing with salt rounds
+   - Complexity requirements enforced
+   - Password change revokes all sessions
 
-### Required API Keys
+3. **API Security**
+   - CORS properly configured
+   - Rate limiting per user/endpoint
+   - Input validation with Pydantic
+   - SQL injection prevention with ORM
+
+4. **Data Protection**
+   - User data isolation
+   - HTTPS enforced in production
+   - Sensitive data not logged
+   - Secure session management
+
+### Security Checklist
+- [ ] Change SECRET_KEY in production
+- [ ] Use HTTPS in production
+- [ ] Configure proper CORS origins
+- [ ] Enable rate limiting
+- [ ] Set secure cookie flags
+- [ ] Implement CSRF protection
+- [ ] Regular security audits
+- [ ] Monitor for suspicious activity
+
+## Deployment Guide
+
+### Environment Variables
+```env
+# Required
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+SECRET_KEY=your-production-secret-key-min-32-chars
+POLYGON_API_KEY=your-polygon-api-key
+
+# Email (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=app-specific-password
+
+# Security
+ENVIRONMENT=production
+CORS_ORIGINS=https://yourdomain.com
+```
+
+### Docker Production Build
+```dockerfile
+# backend/Dockerfile.prod
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+USER nobody
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Database Migrations
 ```bash
-# .env file
-POLYGON_API_KEY=your_polygon_key        # REQUIRED - $29/month
-# ALPHA_VANTAGE_API_KEY removed - no longer needed!
-DATABASE_URL=postgresql://...           # Auto-configured
-REDIS_URL=redis://redis:6379           # Auto-configured
+# Run migrations in production
+docker exec -it backend alembic upgrade head
+
+# Create backup before migrations
+docker exec postgres pg_dump -U user dbname > backup.sql
 ```
 
-## 📚 Recent Updates (May 30, 2025)
+### Monitoring
+- Health check endpoint: `/health`
+- Metrics endpoint: `/metrics` (coming soon)
+- Log aggregation with ELK stack
+- Error tracking with Sentry
 
-### Professional Stock Screener ✅
-- Advanced filter panel with price, volume, change %, technical indicators
-- Separate `/api/market/screen` endpoint for filtered searches
-- Smart UX: "Scan" vs "Screen" button text
-- Filter validation for "All Stocks" mode
-- Match statistics display
+### Scaling Considerations
+1. **Database**: Use read replicas for heavy queries
+2. **Caching**: Redis for session and API responses
+3. **Load Balancing**: Nginx with multiple backend instances
+4. **Background Jobs**: Celery for email and heavy processing
+5. **CDN**: Static assets and API caching
 
-### Recommendation System Overhaul ✅
-- Migrated from Alpha Vantage to Polygon.io
-- Removed 12-second rate limiting
-- Created EnhancedRecommendationService
-- More reasonable momentum thresholds
-- Instant watchlist analysis
+## API Rate Limits
 
-### Frontend Enhancements ✅
-- Modular component architecture
-- Dynamic button states
-- Auto-close filter panel
-- Better error handling
-- Professional data visualization
+### Default Limits (Free Tier)
+- Market scans: 50/day
+- Screener: 20/day with 3 filters max
+- Recommendations: 100/day
+- API calls: 60/hour
 
-## 🎯 Next Steps
+### Premium Limits
+- Market scans: 500/day
+- Screener: Unlimited with unlimited filters
+- Recommendations: 1000/day
+- API calls: 600/hour
 
-### Immediate Enhancements
-1. **Technical Indicators**: Add MACD, Bollinger Bands to screener
-2. **Pattern Recognition**: Triangle, channel, flag detection
-3. **Save Screener Presets**: Save favorite filter combinations
-4. **Export Results**: CSV download functionality
-
-### Future Features
-1. **Real-time WebSocket**: Live price updates
-2. **Backtesting**: Test strategies on historical data
-3. **Portfolio Tracking**: Track actual positions
-4. **News Integration**: Sentiment analysis
-5. **Mobile App**: React Native version
+### Enterprise
+- All limits removed
+- Priority API access
+- Dedicated support
 
 ---
 
-**Note:** This is a living document. As features are added and decisions are made, this documentation should be updated to reflect the current state of the project.
-
-**Version:** 2.0  
-**Major Update:** Removed Alpha Vantage dependency, added professional screener
+For more information, see:
+- [README.md](README.md) - Getting started
+- [ROADMAP.md](ROADMAP.md) - Future development plans
+- [API Docs](http://localhost:8000/docs) - Interactive API documentation
