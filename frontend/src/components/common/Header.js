@@ -1,9 +1,9 @@
 // frontend/src/components/common/Header.js
 import React from 'react';
-import { Settings, LogOut, User } from 'lucide-react';
+import { Settings, LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const Header = ({ showSettings, onToggleSettings }) => {
+const Header = ({ showSettings, onToggleSettings, showAdmin, onToggleAdmin }) => {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleLogout = () => {
@@ -35,9 +35,27 @@ const Header = ({ showSettings, onToggleSettings }) => {
                 )}
               </div>
               
+              {user?.is_admin && (
+                <button 
+                  onClick={onToggleAdmin}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    showAdmin 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Admin</span>
+                </button>
+              )}
+              
               <button 
                 onClick={onToggleSettings}
-                className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  showSettings 
+                    ? 'bg-gray-600 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
               >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>

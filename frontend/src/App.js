@@ -18,6 +18,7 @@ import WatchlistManager from './components/watchlist/WatchlistManager';
 import SettingsPanel from './components/common/SettingsPanel';
 import Footer from './components/common/Footer';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import AdminPanel from './components/admin/AdminPanel';
 
 // Hooks
 import { useMarketScanner } from './hooks/useMarketScanner';
@@ -27,8 +28,9 @@ import { useStats } from './hooks/useStats';
 
 // Main app content (separated so it can use useAuth)
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [error] = useState(null);
   
   // Use custom hooks
@@ -50,7 +52,7 @@ function AppContent() {
     if (isAuthenticated) {
       stats.fetch();
     }
-  }, [recommendations.confidenceThreshold, recommendations.maxRecommendations, isAuthenticated, stats.fetch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [recommendations.confidenceThreshold, recommendations.maxRecommendations, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show loading while checking auth
   if (loading) {
@@ -76,7 +78,12 @@ function AppContent() {
         <Header 
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(!showSettings)}
+          showAdmin={showAdmin}
+          onToggleAdmin={() => setShowAdmin(!showAdmin)}
         />
+
+        {/* Show admin panel when toggled */}
+        {user?.is_admin && showAdmin && <AdminPanel />}
 
         {showSettings && (
           <SettingsPanel
