@@ -7,6 +7,9 @@ import logging
 import json
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, date
+from uuid import UUID
+from typing import Optional
+from models.auth import ScanHistory, ScreenerPreset
 from contextlib import contextmanager
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
@@ -409,4 +412,72 @@ class DatabaseService:
             
         except Exception as e:
             logger.error(f"Error initializing default watchlist: {e}")
+            return False
+
+    def get_user_watchlist(self, user_id: UUID) -> List[str]:
+        """Get watchlist for specific user"""
+        try:
+            with self.get_session() as session:
+                watchlist_items = session.query(Watchlist).filter(
+                    Watchlist.user_id == user_id,
+                    Watchlist.is_active == True
+                ).order_by(Watchlist.symbol).all()
+                
+                return [item.symbol for item in watchlist_items]
+        except Exception as e:
+            logger.error(f"Error fetching user watchlist: {e}")
+            return []
+
+    def add_to_user_watchlist(self, user_id: UUID, symbol: str) -> bool:
+        """Add symbol to user's watchlist"""
+        try:
+            symbol = symbol.upper().strip()
+            
+            with self.get_session() as session:
+                # Check if symbol already exists for this user
+                existing = session.query(Watchlist).filter(
+                    Watchlist.user_id == user_id,
+                    Watchlist.symbol == symbol
+                ).first()
+                
+                if existing:
+                    # Reactivate if exists
+                    existing.is_active = True
+                    existing.added_at = datetime.utcnow()
+                else:
+                    # Create new entry
+                    new_item = Watchlist(
+                        symbol=symbol,
+                        user_id=user_id
+                    )
+                    session.add(new_item)
+                
+                logger.info(f"Added {symbol} to watchlist for user {user_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error adding {symbol} to user watchlist: {e}")
+            return False
+
+    def remove_from_user_watchlist(self, user_id: UUID, symbol: str) -> bool:
+        """Remove symbol from user's watchlist"""
+        try:
+            symbol = symbol.upper().strip()
+            
+            with self.get_session() as session:
+                watchlist_item = session.query(Watchlist).filter(
+                    Watchlist.user_id == user_id,
+                    Watchlist.symbol == symbol
+                ).first()
+                
+                if watchlist_item:
+                    watchlist_item.is_active = False
+                    logger.info(f"Removed {symbol} from watchlist for user {user_id}")
+                    return True
+                else:
+                    logger.warning(f"Symbol {symbol} not found in user's watchlist")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error removing {symbol} from user watchlist: {e}")
             return False

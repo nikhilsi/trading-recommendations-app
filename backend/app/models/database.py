@@ -1,5 +1,5 @@
 # backend/app/models/database.py
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, Date, BigInteger
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text, Date, BigInteger, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
@@ -78,7 +78,8 @@ class Watchlist(Base):
     __tablename__ = "watchlist"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    symbol = Column(String(10), unique=True, nullable=False)
+    symbol = Column(String(10), unique=False, nullable=False)  # Changed to non-unique
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))  
     added_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 

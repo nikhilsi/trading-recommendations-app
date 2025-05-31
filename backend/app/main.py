@@ -5,6 +5,7 @@ Professional FastAPI application with clean modular architecture
 import logging
 import sys
 from contextlib import asynccontextmanager
+import os
 
 # Add the app directory to Python path
 sys.path.insert(0, '/app/app')
@@ -21,6 +22,7 @@ from api.health import router as health_router
 from api.market import router as market_router
 from api.watchlist import router as watchlist_router
 from api.recommendations import router as recommendations_router
+from api.auth import router as auth_router
 
 # Services
 from services.database_service import DatabaseService
@@ -84,6 +86,7 @@ setup_cors(app)
 
 # Include routers
 app.include_router(health_router)
+app.include_router(auth_router)  
 app.include_router(market_router)
 app.include_router(watchlist_router)
 app.include_router(recommendations_router)
