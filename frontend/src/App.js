@@ -2,6 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+// Auth Context
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+
 // Components
 import Header from './components/common/Header';
 import ErrorMessage from './components/common/ErrorMessage';
@@ -11,6 +17,7 @@ import RecommendationsList from './components/recommendations/RecommendationsLis
 import WatchlistManager from './components/watchlist/WatchlistManager';
 import SettingsPanel from './components/common/SettingsPanel';
 import Footer from './components/common/Footer';
+import LoadingSpinner from './components/common/LoadingSpinner';
 
 // Hooks
 import { useMarketScanner } from './hooks/useMarketScanner';
@@ -18,7 +25,9 @@ import { useRecommendations } from './hooks/useRecommendations';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useStats } from './hooks/useStats';
 
-function App() {
+// Main app content (separated so it can use useAuth)
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
   const [error] = useState(null);
   
@@ -28,20 +37,39 @@ function App() {
   const watchlist = useWatchlist();
   const stats = useStats();
 
-  // Initial data load
+  // Initial data load (only when authenticated)
   useEffect(() => {
-    watchlist.fetch();
-    stats.fetch();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isAuthenticated) {
+      watchlist.fetch();
+      stats.fetch();
+    }
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh stats when recommendations update
   useEffect(() => {
-    stats.fetch();
-  }, [recommendations.confidenceThreshold, recommendations.maxRecommendations, stats.fetch]); 
+    if (isAuthenticated) {
+      stats.fetch();
+    }
+  }, [recommendations.confidenceThreshold, recommendations.maxRecommendations, isAuthenticated, stats.fetch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner message="Loading..." />
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   // Combine errors from different sources
   const currentError = error || marketScanner.error || recommendations.error || watchlist.error;
 
+  // Main app for authenticated users
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -101,6 +129,15 @@ function App() {
         <Footer />
       </div>
     </div>
+  );
+}
+
+// Root App component with AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

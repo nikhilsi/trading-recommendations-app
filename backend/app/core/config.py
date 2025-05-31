@@ -14,10 +14,11 @@ class Settings:
     technical indicators, and comprehensive database persistence.
     """
     
-    # CORS Settings
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://frontend:3000",
+        "*"  # Temporarily allow all origins for testing
     ]
     
     # Database
